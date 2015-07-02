@@ -126,7 +126,7 @@ undo t (A a as u) =
 
 {-| Change the `to` value of a running animation, without an abrupt acceleration or jerk. The easing function will be
 retained (but you can change it with `ease`). A new speed and duration will be chosen based on what makes the animation
-smooth. It is safe to retarget animations that are scheduled and done.
+smooth. It is safe to retarget animations that are scheduled or done.
 -}
 retarget : Time -> Float -> Animation -> Animation
 retarget t newTo (A a as u) =
@@ -155,7 +155,7 @@ speed x (A a) = A {a| dos <- Speed (abs x)}
 delay : Time -> Animation -> Animation
 delay x (A a) = A {a| delay <- x}
 
-{-| Set the easing function of an animation. It is expected that `f 0 == 0` and `f 1 == `. The default is a sinusoidal
+{-| Set the easing function of an animation. It is expected that `f 0 == 0` and `f 1 == 1`. The default is a sinusoidal
 in-out.
 -}
 ease : (Float -> Float) -> Animation -> Animation
