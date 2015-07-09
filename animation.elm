@@ -1,4 +1,4 @@
-module Animation (Animation, animation, static, animate, duration, speed, delay, ease, from, to, undo, retarget, velocity, timeRemaining, isScheduled, isRunning, isDone) where
+module Animation (Animation, animation, static, animate, duration, speed, delay, ease, from, to, undo, retarget, getDuration, getSpeed, getDelay, getEase, getFrom, getTo, velocity, timeRemaining, isScheduled, isRunning, isDone) where
 
 {-| A library for animating between two Float values. For example, animate a panel's width from 100px to 300px over 2
 seconds, or make a button spin and grow on hover. Everything is a pure function, no signals in sight, so you can use it
@@ -40,7 +40,7 @@ in and out is applied by default. Animations go through three phases (not relate
 they are scheduled, they run, and then they are done.
 
 # Create
-@docs animation, static, Animation
+@docs animation, static
 
 # Run
 @docs animate
@@ -54,14 +54,17 @@ You may set an animation's duration or speed but not both, since one determines 
 @docs undo, retarget
 
 # Inspect
-## Settings
-TODO @docs getDuration, getSpeed, getDelay, getEase, getFrom, getTo
-
-## Physics
-@docs velocity, timeRemaining
-
 ## Lifecycle
 @docs isScheduled, isRunning, isDone
+
+## Physics
+@docs timeRemaining, velocity
+
+## Settings
+@docs getDuration, getSpeed, getDelay, getEase, getFrom, getTo
+
+# The Animation type
+@docs Animation
 
 -}
 
@@ -179,13 +182,8 @@ from x (A a) = A {a| from <- x}
 to : Float -> Animation -> Animation
 to x (A a) = A {a| to <- x}
 
-{-| Get the total duration of an animation, not counting delay.
--}
-getDuration : Animation -> Time
-getDuration (A {dos, from, to}) = dur dos from to
-
-{-| Get the time that the animation has yet to play before becoming done. Will be zero for animations that are already
-done.
+{-| Get the time that the animation has yet to play (or be delayed) before becoming done. Will be zero for animations
+that are already done.
 -}
 timeRemaining : Time -> Animation -> Time
 timeRemaining t (A {start, delay, dos, from, to}) =
@@ -196,20 +194,40 @@ timeRemaining t (A {start, delay, dos, from, to}) =
 difference). The velocity may be negative.
 -}
 velocity : Time -> Animation -> Float
-velocity t (A a as u) =
+velocity t u =
     let backDiff = animate (t-10) u
         forwDiff = animate (t+10) u
     in (forwDiff - backDiff) / 20
 
--- TODO: other getters
-{-
-getTo (A a) = a.to
-setStart t (A a) = {a| start <- t}
+{-| Get the duration of the animation, not counting delay.
 -}
--- for docs?
---Speed is the rate at which the animation progresses between the `from` and `to` values per milisecond.
---You can get the speed even if you specified duration instead.
+getDuration : Animation -> Time
+getDuration (A {dos, from, to}) = dur dos from to
 
+{-| Get the average speed of the animation.
+-}
+getSpeed : Animation -> Float
+getSpeed (A {dos, from, to}) = spd dos from to
+
+{-| Get the delay of the animation.
+-}
+getDelay : Animation -> Time
+getDelay (A a) = a.delay
+
+{-| Get the easing function of the animation.
+-}
+getEase : Animation -> Float -> Float
+getEase (A a) = a.ease
+
+{-| Get the initial value of the animation.
+-}
+getFrom : Animation -> Float
+getFrom (A a) = a.from
+
+{-| Get the final value of the animation.
+-}
+getTo : Animation -> Float
+getTo (A a) = a.to
 
 {-| Determine if an animation is scheduled, meaning that it has not yet changed value.
 -}
