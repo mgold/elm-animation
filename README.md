@@ -23,6 +23,8 @@ Once you have your value at the current time, you can render it to any frontend 
 [turtles](http://package.elm-lang.org/packages/mgold/elm-turtle-graphics/latest)...
 
 ## Basic Usage
+`animation` creates an animation starting at the given time (usually the current time). `animate` takes the current time
+and an animation and produces the current value.
 
 ````elm
 import Animation exposing (..)
@@ -33,5 +35,6 @@ List.map (\t -> animate (t*second) myAnim) [0..6]
 -- [100, 100, 129.29, 200, 270.71, 300, 300]
 ````
 
-Notice that the value remains constant during the delay and after the animation is complete, and that easing in and out
-is applied by default.
+Notice that the value remains constant during the delay and after the animation is done, and that sinusoidal easing
+in and out is applied by default. Animations go through three phases (not related to the three stages of rendering):
+they are scheduled, they run, and then they are done.

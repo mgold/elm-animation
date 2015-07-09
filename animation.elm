@@ -24,6 +24,9 @@ Once you have your value at the current time, you can render it to any frontend 
 
 # Basic Usage
 
+`animation` creates an animation starting at the given time (usually the current time). `animate` takes the current time
+and an animation and produces the current value.
+
 ````elm
 import Animation exposing (..)
 import Time exposing (second)
@@ -32,8 +35,9 @@ myAnim = animation 0 |> from 100 |> to 300 |> duration (4*second) |> delay (1*se
 List.map (\t -> animate (t*second) myAnim) [0..6]
 -- [100, 100, 129.29, 200, 270.71, 300, 300]
 ````
-Notice that the value remains constant during the delay and after the animation is complete, and that easing in and out
-is applied by default.
+Notice that the value remains constant during the delay and after the animation is done, and that sinusoidal easing
+in and out is applied by default. Animations go through three phases (not related to the three stages of rendering):
+they are scheduled, they run, and then they are done.
 
 # Create
 @docs animation, static, Animation
@@ -117,7 +121,8 @@ animate t (A {start, delay, dos, ramp, from, to, ease})  =
                         in from' - from'*eased'
     in from + (to-from)*eased + correction
 
-{-| Run an animation in reverse from its current state, beginning immediately.
+{-| Run an animation in reverse from its current state, beginning immediately (even if the animation was delayed or has
+been done for a while).
 -}
 undo : Time -> Animation -> Animation
 undo t (A a as u) =
@@ -126,7 +131,8 @@ undo t (A a as u) =
 
 {-| Change the `to` value of a running animation, without an abrupt acceleration or jerk. The easing function will be
 retained (but you can change it with `ease`). A new speed and duration will be chosen based on what makes the animation
-smooth. It is safe to retarget animations that are scheduled or done.
+smooth. It is safe to retarget animations that are scheduled (the `to` value is replaced), or done (`from` becomes the
+old `to`; `to` and `start` are set to the values provided).
 -}
 retarget : Time -> Float -> Animation -> Animation
 retarget t newTo (A a as u) =
@@ -137,7 +143,8 @@ retarget t newTo (A a as u) =
                 pos = animate t u
             in A <| AnimRecord t 0 (Speed (vel/3)) (Just vel) a.ease pos newTo
 
-{-| Set the duration of an animation. This setting overrides, and is overriden by, `speed` (last application wins).
+{-| Set the duration of an animation to the time specified. This setting overrides, and is overriden by, `speed` (last
+application wins).
 -}
 duration : Time -> Animation -> Animation
 duration x (A a) = A {a| dos <- Duration x}
@@ -150,7 +157,8 @@ the sign. It is safe to alter the `from` and `to` values after setting speed, bu
 speed : Float -> Animation -> Animation
 speed x (A a) = A {a| dos <- Speed (abs x)}
 
-{-| Set the delay of an animation. An animation will not start until after the delay. The default delay is 0.
+{-| Set the delay of an animation to the time specified. An animation will not start until after the delay. The default
+delay is 0.
 -}
 delay : Time -> Animation -> Animation
 delay x (A a) = A {a| delay <- x}
