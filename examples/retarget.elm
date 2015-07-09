@@ -1,12 +1,14 @@
-import Animation exposing (..)
-import Time exposing (Time)
+-- This is a demonstration of the retarget function and how the resulting animation is smooth
 
-import Mouse
-import Window
-import Graphics.Collage as Collage
 import Color exposing (blue, red, purple)
-import Graphics.Element exposing (Element)
 import Debug
+import Graphics.Element exposing (Element)
+import Graphics.Collage as Collage
+import Mouse
+import Time exposing (Time)
+import Window
+
+import Animation exposing (..)
 
 type Action = Tick Time | Interrupt | NoOp
 type alias State = { clock : Time, x : Animation, prevs : List Float}
