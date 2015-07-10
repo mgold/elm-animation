@@ -1,4 +1,4 @@
-module Animation (Animation, animation, static, animate, duration, speed, delay, ease, from, to, undo, retarget, getDuration, getSpeed, getDelay, getEase, getFrom, getTo, velocity, timeRemaining, isScheduled, isRunning, isDone) where
+module Animation (Animation, animation, static, animate, duration, speed, delay, ease, from, to, undo, retarget, getStart, getDuration, getSpeed, getDelay, getEase, getFrom, getTo, velocity, timeRemaining, isScheduled, isRunning, isDone) where
 
 {-| A library for animating between two Float values. For example, animate a panel's width from 100px to 300px over 2
 seconds, or make a button spin and grow on hover. Everything is a pure function, no signals in sight, so you can use it
@@ -54,6 +54,7 @@ You may set an animation's duration or speed but not both, since one determines 
 @docs undo, retarget
 
 # Inspect
+Animations do not support equality checks (because equating easing functions is undecidable).
 ## Lifecycle
 @docs isScheduled, isRunning, isDone
 
@@ -61,7 +62,7 @@ You may set an animation's duration or speed but not both, since one determines 
 @docs timeRemaining, velocity
 
 ## Settings
-@docs getDuration, getSpeed, getDelay, getEase, getFrom, getTo
+@docs getStart, getDuration, getSpeed, getDelay, getEase, getFrom, getTo
 
 # The Animation type
 @docs Animation
@@ -129,8 +130,8 @@ been done for a while).
 -}
 undo : Time -> Animation -> Animation
 undo t (A a as u) =
-    let remaining = timeRemaining t u
-    in A {a| from <- a.to, to <- a.from, start <- t-remaining, delay <- 0}
+    A {a| from <- a.to, to <- a.from, start <- t, delay <- -(timeRemaining t u)}
+--TODO: Are we sure this isn't wrong with a non-symetrical easing function?
 
 {-| Change the `to` value of a running animation, without an abrupt acceleration or jerk. The easing function will be
 retained (but you can change it with `ease`). A new speed and duration will be chosen based on what makes the animation
@@ -198,6 +199,12 @@ velocity t u =
     let backDiff = animate (t-10) u
         forwDiff = animate (t+10) u
     in (forwDiff - backDiff) / 20
+
+{-| Get the start time of the animation, the argument to `animate`. For interrupted animations, this is when the
+interruption occured.
+-}
+getStart : Animation -> Time
+getStart (A a) = a.start
 
 {-| Get the duration of the animation, not counting delay.
 -}
