@@ -1,45 +1,109 @@
--- This is a demonstration of the retarget function and how the resulting animation is smooth
-
-import Color exposing (blue, red, purple)
-import Debug
-import Graphics.Element exposing (Element)
-import Graphics.Collage as Collage
-import Mouse
+import Color
+import Graphics.Element as E exposing (Element)
+import Graphics.Collage as C exposing (Form)
 import Time exposing (Time)
+import Mouse
+import Keyboard
 import Window
 
 import Animation exposing (..)
 
-type Action = Tick Time | Interrupt | NoOp
-type alias State = { clock : Time, x : Animation, prevs : List Float}
-state0 = State 0 (animation 0 |> from -300 |> to 300 |> duration 3000) []
+{-| docs -}
 
-step : Action -> State -> State
-step act state =
-    case act of
-        Tick t -> {state| clock <- t + state.clock,
-                          prevs <- Debug.watch "x" (animate state.clock state.x) :: state.prevs}
-                  |> Debug.watchSummary "clock" (always state.clock)
-        Interrupt -> {state| x <- retarget state.clock 100 state.x}
-                    |> Debug.watchSummary "interrupted" (always state.clock)
-        NoOp -> state
+mouseLocation : Signal (Float, Float)
+mouseLocation =
+  Signal.map2 (\(w,h) (x,y) -> (toFloat x - toFloat w / 2, toFloat h / 2 - toFloat y))
+      Window.dimensions Mouse.position
 
-interrupts = Signal.foldp (\_ c -> c+1) 0 (Time.fps 10)
-    |> Signal.map (\c -> if c == 13 then Interrupt else NoOp)
+type alias Pos = (Float, Float)
+type alias Model =
+    { clock : Time
+    , x : Animation
+    , y : Animation
+    , trail : List Pos
+    , clicks : List Pos
+    , lastClickTime : Time
+    , slow : Bool
+    }
 
-ticks = Signal.map Tick (Time.fps 60)
+dur = 750
+
+static' x =
+    animation 0 |> from x |> to x |> duration dur
+
+model0 : Model
+model0 = Model 0 (static' 0) (static' 0) [] [] 0 False
+
+type Action = Tick Time | Click Pos | Reset | NoOp | Slow Bool
 
 actions : Signal Action
-actions = Signal.merge ticks interrupts
+actions =
+    Signal.mergeMany
+        [ Signal.map (\b -> if b then Reset else NoOp) Keyboard.space
+        , Signal.map Slow Keyboard.shift
+        , Signal.map Click (Signal.sampleOn Mouse.clicks mouseLocation)
+        , Signal.map Tick (Time.fps 50)
+        ]
 
-state : Signal State
-state = Signal.foldp step state0 actions
+update : Action -> Model -> Model
+update action model =
+    case action of
+        Tick dt -> updateTick dt model
+        Click pos -> {model| clicks <- pos::model.clicks
+                           , x <- retarget model.clock (fst pos) model.x |> duration dur
+                           , y <- retarget model.clock (snd pos) model.y |> duration dur
+                           }
+        Reset -> {model | clicks <- List.head model.clicks |> Maybe.map (\c -> [c]) |> Maybe.withDefault []
+                        , trail <- []
+                 }
+        Slow b -> {model | slow <- b}
+        NoOp -> model
 
-render : State -> Element
-render {clock, x, prevs} =
-    let xPos = animate clock x
-        circle = Collage.circle 20 |> Collage.filled blue |> Collage.moveX xPos
-        circles = List.indexedMap (\i x -> Collage.circle 2 |> Collage.filled blue |> Collage.move (x, toFloat -i)) prevs
-    in Collage.collage 700 600 <| circle :: circles
 
-main = Signal.map render (Signal.sampleOn ticks state)
+close a b = abs (a - b) < 1
+updateTick : Time -> Model -> Model
+updateTick dt model =
+    let dt' = if model.slow then dt/5 else dt
+        clock = model.clock + dt'
+        pos = (animate clock model.x, animate clock model.y)
+        _ = model.lastClickTime
+        recentlyClicked = model.lastClickTime + 10 > clock
+        lastClickTime = if recentlyClicked then model.lastClickTime else clock
+        trail = case List.head model.trail of
+            Nothing -> [pos]
+            Just pos' -> if close (fst pos) (fst pos') && close (snd pos) (snd pos') || recentlyClicked
+                         then model.trail
+                         else pos :: model.trail
+
+    in {model| clock <- clock, trail <- trail, lastClickTime <- lastClickTime}
+
+model : Signal Model
+model = Signal.foldp update model0 actions
+
+render : (Int, Int) -> Model -> Element
+render (w,h) model =
+    C.collage w h <|
+        renderClicks model ++
+        renderTrail model ++
+        [renderBall model]
+
+renderBall {clock, x, y} =
+    let pos = (animate clock x, animate clock y)
+        vel = (100*velocity clock x, 100*velocity clock y)
+    in C.group
+        [ C.circle 20 |> C.filled Color.darkBlue
+        , C.segment (0,0) vel |> C.traced (C.solid Color.red)
+        ] |> C.move pos
+
+renderTrail {trail} =
+    List.map
+        (\pos -> C.circle 2 |> C.filled Color.lightPurple |> C.move pos)
+        trail
+
+renderClicks {clicks} =
+    List.map
+        (\pos -> C.square 12 |> C.filled Color.green |> C.move pos)
+        clicks
+
+main = Signal.map2 render Window.dimensions model
+--main = Signal.map E.show model
