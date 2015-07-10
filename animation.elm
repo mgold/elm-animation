@@ -135,13 +135,15 @@ undo t (A a as u) =
 
 {-| Change the `to` value of a running animation, without an abrupt acceleration or jerk. The easing function will be
 retained (but you can change it with `ease`). A new speed and duration will be chosen based on what makes the animation
-smooth. It is safe to retarget animations that are scheduled (the `to` value is replaced), or done (`from` becomes the
-old `to`; `to` and `start` are set to the values provided).
+smooth. If you retarget multiple animations at once (e.g. x and y), you will need to sync their durations.
+
+It is safe to retarget animations that are scheduled (the `to` value is replaced), or done (`from` becomes the old `to`;
+`to` and `start` are set to the values provided).
 -}
 retarget : Time -> Float -> Animation -> Animation
 retarget t newTo (A a as u) =
-    if | isScheduled t u -> A {a| to <- newTo}
-       | isDone t u -> A {a| start <- t, from <- a.to, to <- newTo}
+    if | isScheduled t u -> A {a| to <- newTo, ramp <- Nothing}
+       | isDone t u -> A {a| start <- t, from <- a.to, to <- newTo, ramp <- Nothing}
        | otherwise ->
             let vel = velocity t u
                 pos = animate t u
@@ -176,12 +178,14 @@ ease x (A a) = A {a| ease <- x}
 {-| Set the initial value of an animation. The default is 0.
 -}
 from : Float -> Animation -> Animation
-from x (A a) = A {a| from <- x}
+from x (A a) = A {a| from <- x, ramp <- Nothing}
 
 {-| Set the final value of an animation. The default is 1.
+
+For animations that are already running, use `retarget`.
 -}
 to : Float -> Animation -> Animation
-to x (A a) = A {a| to <- x}
+to x (A a) = A {a| to <- x, ramp <- Nothing}
 
 {-| Get the time that the animation has yet to play (or be delayed) before becoming done. Will be zero for animations
 that are already done.
