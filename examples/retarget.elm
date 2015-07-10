@@ -5,6 +5,7 @@ import Time exposing (Time)
 import Mouse
 import Keyboard
 import Window
+import Debug
 
 import Animation exposing (..)
 
@@ -76,6 +77,9 @@ updateTick dt model =
                          else pos :: model.trail
 
     in {model| clock <- clock, trail <- trail, lastClickTime <- lastClickTime}
+        |> Debug.watchSummary "Bullet Time" .slow
+        |> Debug.watchSummary "Smeared Time" .smear
+        |> Debug.watchSummary "Animation ends in" (\{clock, x} -> (timeRemaining clock x)/1000)
 
 model : Signal Model
 model = Signal.foldp update model0 actions
