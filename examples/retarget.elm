@@ -29,11 +29,8 @@ type alias Model =
 
 dur = 750
 
-static' x =
-    animation 0 |> from x |> to x |> duration dur
-
 model0 : Model
-model0 = Model 0 (static' 0) (static' 0) [] [] 0 False False
+model0 = Model 0 (static 0) (static 0) [] [] 0 False False
 
 type Action = Tick Time | Click Pos | Reset | NoOp | Slow Bool | Smear Bool
 

@@ -109,7 +109,7 @@ animation now = A <| AnimRecord now 0 (Duration 750) Nothing Dan.easeInOutSine 0
 {-| Create a static animation that is always the given value.
 -}
 static : Float -> Animation
-static x = A <| AnimRecord 0 0 (Duration 0) Nothing identity x x
+static x = A <| AnimRecord 0 0 (Duration 0) Nothing Dan.easeInOutSine x x
 
 {-| Produce the value of an animation at a given time.
 -}
@@ -144,6 +144,7 @@ retarget : Time -> Float -> Animation -> Animation
 retarget t newTo (A a as u) =
     if | isScheduled t u -> A {a| to <- newTo, ramp <- Nothing}
        | isDone t u -> A {a| start <- t, from <- a.to, to <- newTo, ramp <- Nothing}
+       | a.from == a.to -> A {a| start <- t, to <- newTo, dos <- Duration 750, ramp <- Nothing}
        | otherwise ->
             let vel = velocity t u
                 pos = animate t u
