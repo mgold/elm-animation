@@ -24,6 +24,7 @@ type alias Model =
     , clicks : List Pos
     , lastClickTime : Time
     , slow : Bool
+    , smear : Bool
     }
 
 dur = 750
@@ -32,14 +33,15 @@ static' x =
     animation 0 |> from x |> to x |> duration dur
 
 model0 : Model
-model0 = Model 0 (static' 0) (static' 0) [] [] 0 False
+model0 = Model 0 (static' 0) (static' 0) [] [] 0 False False
 
-type Action = Tick Time | Click Pos | Reset | NoOp | Slow Bool
+type Action = Tick Time | Click Pos | Reset | NoOp | Slow Bool | Smear Bool
 
 actions : Signal Action
 actions =
     Signal.mergeMany
-        [ Signal.map (\b -> if b then Reset else NoOp) Keyboard.space
+        [ Signal.map (\b -> if b then Reset else NoOp) Keyboard.enter
+        , Signal.map Smear Keyboard.space
         , Signal.map Slow Keyboard.shift
         , Signal.map Click (Signal.sampleOn Mouse.clicks mouseLocation)
         , Signal.map Tick (Time.fps 50)
@@ -57,6 +59,7 @@ update action model =
                         , trail <- []
                  }
         Slow b -> {model | slow <- b}
+        Smear b -> {model | smear <- b}
         NoOp -> model
 
 
@@ -87,7 +90,14 @@ render (w,h) model =
         renderTrail model ++
         [renderBall model]
 
-renderBall {clock, x, y} =
+renderBall model =
+    let oneBall = renderBall' model.clock model.x model.y
+    in if model.smear
+    then List.map (\t -> renderBall' (model.clock + t*20) model.x model.y) [-5..5]
+            |> C.group |> C.alpha 0.3 |> \gr -> C.group [oneBall, gr]
+    else oneBall
+
+renderBall' clock x y =
     let pos = (animate clock x, animate clock y)
         vel = (100*velocity clock x, 100*velocity clock y)
     in C.group
