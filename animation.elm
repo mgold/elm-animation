@@ -1,4 +1,4 @@
-module Animation (Animation, animation, static, animate, duration, speed, delay, ease, from, to, undo, retarget, getStart, getDuration, getSpeed, getDelay, getEase, getFrom, getTo, velocity, timeRemaining, isScheduled, isRunning, isDone) where
+module Animation (Animation, animation, static, animate, duration, speed, delay, ease, from, to, undo, retarget, getStart, getDuration, getSpeed, getDelay, getEase, getFrom, getTo, velocity, timeElapsed, timeRemaining, isScheduled, isRunning, isDone) where
 
 {-| A library for animating between two Float values. For example, animate a panel's width from 100px to 300px over 2
 seconds, or make a button spin and grow on hover. Everything is a pure function, no signals in sight, so you can use it
@@ -59,7 +59,7 @@ Animations do not support equality checks (because equating easing functions is 
 @docs isScheduled, isRunning, isDone
 
 ## Physics
-@docs timeRemaining, velocity
+@docs timeElapsed, timeRemaining, velocity
 
 ## Settings
 @docs getStart, getDuration, getSpeed, getDelay, getEase, getFrom, getTo
@@ -100,11 +100,15 @@ spd dos from to =
         Duration t -> (abs (to - from)) / t
         Speed s -> s
 
+--private
+defaultDuration : DurationOrSpeed
+defaultDuration = Duration (750 * Time.millisecond)
+
 {-| Create an animation that begins now. By default, animations have no delay, last 750ms, and interpolate between 0 and
 1 with a sinusoidal easing function. All of these can be changed.
 -}
 animation : Time -> Animation
-animation now = A <| AnimRecord now 0 (Duration 750) Nothing Dan.easeInOutSine 0 1
+animation now = A <| AnimRecord now 0 defaultDuration Nothing Dan.easeInOutSine 0 1
 
 {-| Create a static animation that is always the given value.
 -}
@@ -127,15 +131,18 @@ animate t (A {start, delay, dos, ramp, from, to, ease})  =
 
 {-| Run an animation in reverse from its current state, beginning immediately (even if the animation was delayed or has
 been done for a while).
+
+Usually you don't want to undo an animation that has been retargeted; just retarget it again.
 -}
 undo : Time -> Animation -> Animation
 undo t (A a as u) =
-    A {a| from <- a.to, to <- a.from, start <- t, delay <- -(timeRemaining t u)}
+    A {a| from <- a.to, to <- a.from, start <- t, delay <- -(timeRemaining t u), ramp <- Nothing}
 --TODO: Are we sure this isn't wrong with a non-symetrical easing function?
 
 {-| Change the `to` value of a running animation, without an abrupt acceleration or jerk. The easing function will be
 retained (but you can change it with `ease`). A new speed and duration will be chosen based on what makes the animation
-smooth. If you retarget multiple animations at once (e.g. x and y), you will need to sync their durations.
+smooth. If you retarget multiple animations at once (e.g. x and y), you will need to sync their durations (perhaps to
+the `timeRemaining` in the old animations).
 
 It is safe to retarget animations that are scheduled (the `to` value is replaced), or done (`from` becomes the old `to`;
 `to` and `start` are set to the values provided).
@@ -144,7 +151,7 @@ retarget : Time -> Float -> Animation -> Animation
 retarget t newTo (A a as u) =
     if | isScheduled t u -> A {a| to <- newTo, ramp <- Nothing}
        | isDone t u -> A {a| start <- t, from <- a.to, to <- newTo, ramp <- Nothing}
-       | a.from == a.to -> A {a| start <- t, to <- newTo, dos <- Duration 750, ramp <- Nothing}
+       | a.from == a.to -> A {a| start <- t, to <- newTo, dos <- defaultDuration, ramp <- Nothing}
        | otherwise ->
             let vel = velocity t u
                 pos = animate t u
@@ -187,6 +194,13 @@ For animations that are already running, use `retarget`.
 -}
 to : Float -> Animation -> Animation
 to x (A a) = A {a| to <- x, ramp <- Nothing}
+
+{-| Get the time elapsed since the animation started playing (after the end of delay). Will be zero for animations that
+are still scheduled, and is not bounded for animations that are already done.
+-}
+timeElapsed : Time -> Animation -> Time
+timeElapsed t (A {start, delay}) =
+    t - (start + delay) |> max 0
 
 {-| Get the time that the animation has yet to play (or be delayed) before becoming done. Will be zero for animations
 that are already done.
