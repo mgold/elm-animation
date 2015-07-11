@@ -19,9 +19,10 @@ collided pos {r, clock} = animate clock r > dist pos
 here_r = 40
 big_r = 70
 
-mouseInCollage =
-    let f (w,h) (x,y) = (toFloat x - toFloat w / 2, toFloat h / 2 - toFloat y)
-    in Signal.map2 f Window.dimensions Mouse.position
+mouseLocation : Signal (Float, Float)
+mouseLocation =
+    Signal.map2 (\(w,h) (x,y) -> (toFloat x - toFloat w / 2, toFloat h / 2 - toFloat y))
+        Window.dimensions Mouse.position
 
 -- this case analysis is ugly but I think it's intrinsic to the component
 step : Action -> Model -> Model
@@ -57,8 +58,8 @@ step act model = case act of
 actions : Signal Action
 actions = Signal.mergeMany
     [ Signal.map Tick (Time.fps 60)
-    , Signal.map MouseMove mouseInCollage
-    , Signal.map MouseClick (Signal.sampleOn Mouse.clicks mouseInCollage)
+    , Signal.map MouseMove mouseLocation
+    , Signal.map MouseClick (Signal.sampleOn Mouse.clicks mouseLocation)
     ]
 
 model : Signal Model

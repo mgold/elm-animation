@@ -62,13 +62,13 @@ update action model =
 
 
 close a b = abs (a - b) < 1
+ms x = Time.millisecond*x
 updateTick : Time -> Model -> Model
 updateTick dt model =
     let dt' = if model.slow then dt/5 else dt
         clock = model.clock + dt'
         pos = (animate clock model.x, animate clock model.y)
-        _ = model.lastClickTime
-        recentlyClicked = model.lastClickTime + 10 > clock
+        recentlyClicked = model.lastClickTime + (ms 10) > clock
         lastClickTime = if recentlyClicked then model.lastClickTime else clock
         trail = case List.head model.trail of
             Nothing -> [pos]
