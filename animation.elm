@@ -132,7 +132,8 @@ animate t (A {start, delay, dos, ramp, from, to, ease})  =
 {-| Run an animation in reverse from its current state, beginning immediately (even if the animation was delayed or has
 been done for a while).
 
-Usually you don't want to undo an animation that has been retargeted; just retarget it again.
+Usually you don't want to undo an animation that has been retargeted; just retarget it again. Similarly, undoing an
+undone animation is frequently not what you want.
 -}
 undo : Time -> Animation -> Animation
 undo t (A a as u) =
