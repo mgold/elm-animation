@@ -83,6 +83,12 @@ updateTick dt model =
 model : Signal Model
 model = Signal.foldp update model0 actions
 
+acceleration : Time -> Animation -> Float
+acceleration t a =
+    let v0 = velocity (t-10) a
+        v1 = velocity (t+10) a
+    in (v1 - v0) / 20
+
 render : (Int, Int) -> Model -> Element
 render (w,h) model =
     C.collage w h <|
@@ -100,9 +106,11 @@ renderBall model =
 renderBall' clock x y =
     let pos = (animate clock x, animate clock y)
         vel = (100*velocity clock x, 100*velocity clock y)
+        acc = (10000*acceleration clock x, 10000*acceleration clock y)
     in C.group
         [ C.circle 20 |> C.filled Color.darkBlue
         , C.segment (0,0) vel |> thick Color.green
+        , C.segment (0,0) acc |> thick Color.red
         ] |> C.move pos
 
 renderTrail {trail} =
