@@ -1,4 +1,4 @@
-import Color
+import Color exposing (Color)
 import Graphics.Element as E exposing (Element)
 import Graphics.Collage as C exposing (Form)
 import Time exposing (Time)
@@ -102,18 +102,22 @@ renderBall' clock x y =
         vel = (100*velocity clock x, 100*velocity clock y)
     in C.group
         [ C.circle 20 |> C.filled Color.darkBlue
-        , C.segment (0,0) vel |> C.traced (C.solid Color.red)
+        , C.segment (0,0) vel |> thick Color.green
         ] |> C.move pos
 
 renderTrail {trail} =
     List.map
-        (\pos -> C.circle 2 |> C.filled Color.lightPurple |> C.move pos)
+        (\pos -> C.circle 2 |> C.filled Color.lightOrange |> C.move pos)
         trail
 
 renderClicks {clicks} =
-    List.map
-        (\pos -> C.square 12 |> C.filled Color.green |> C.move pos)
+    List.indexedMap
+        (\i pos -> C.square 12 |> C.filled (if i == 0 then Color.purple else Color.lightPurple) |> C.move pos)
         clicks
+thick : Color -> C.Path -> Form
+thick c =
+    let style = C.solid c
+    in C.traced {style| width <- 2}
 
 main = Signal.map2 render Window.dimensions model
 --main = Signal.map E.show model
