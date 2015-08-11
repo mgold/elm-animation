@@ -140,7 +140,7 @@ undo t (A a as u) =
     A {a| from <- a.to, to <- a.from, start <- t, delay <- -(timeRemaining t u), ramp <- Nothing}
 --TODO: Are we sure this isn't wrong with a non-symetrical easing function?
 
-{-| Change the `to` value of a running animation, without an abrupt acceleration or jerk. The easing function will be
+{-| Change the `to` value of a running animation, without an abrupt change in velocity. The easing function will be
 retained (but you can change it with `ease`). A new speed and duration will be chosen based on what makes the animation
 smooth. If you retarget multiple animations at once (e.g. x and y), you will need to sync their durations (perhaps to
 the `timeRemaining` in the old animations).
