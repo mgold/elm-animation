@@ -64,7 +64,7 @@ Animations do not support equality checks (because equating easing functions is 
 ## Settings
 @docs getStart, getDuration, getSpeed, getDelay, getEase, getFrom, getTo
 
-# The Animation type
+# The Animation Type
 @docs Animation
 
 -}
