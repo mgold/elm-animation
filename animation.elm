@@ -159,7 +159,7 @@ retarget t newTo (A a as u) =
             in A <| AnimRecord t 0 (Speed (vel/3)) (Just vel) a.ease pos newTo
 
 {-| Set the duration of an animation to the time specified. This setting overrides, and is overriden by, `speed` (last
-application wins).
+application wins). Note that the `Time` argument is _not_ the current running time but the duration to be set.
 -}
 duration : Time -> Animation -> Animation
 duration x (A a) = A {a| dos <- Duration x}
@@ -173,7 +173,7 @@ speed : Float -> Animation -> Animation
 speed x (A a) = A {a| dos <- Speed (abs x)}
 
 {-| Set the delay of an animation to the time specified. An animation will not start until after the delay. The default
-delay is 0.
+delay is 0. Note that the `Time` argument is _not_ the current running time but the delay to be set.
 -}
 delay : Time -> Animation -> Animation
 delay x (A a) = A {a| delay <- x}
