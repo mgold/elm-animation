@@ -1,4 +1,4 @@
-module Animation (Animation, animation, static, animate, duration, speed, delay, ease, from, to, undo, retarget, getStart, getDuration, getSpeed, getDelay, getEase, getFrom, getTo, velocity, timeElapsed, timeRemaining, isScheduled, isRunning, isDone) where
+module Animation (Animation, animation, static, animate, duration, speed, delay, ease, from, to, undo, retarget, getStart, getDuration, getSpeed, getDelay, getEase, getFrom, getTo, equals, velocity, timeElapsed, timeRemaining, isScheduled, isRunning, isDone) where
 
 {-| A library for animating between two Float values. For example, animate a panel's width from 100px to 300px over 2
 seconds, or make a button spin and grow on hover. Everything is a pure function, no signals in sight, so you can use it
@@ -54,7 +54,9 @@ You may set an animation's duration or speed but not both, since one determines 
 @docs undo, retarget
 
 # Inspect
-Animations do not support equality checks (because equating easing functions is undecidable).
+## Equality
+@docs equals
+
 ## Lifecycle
 @docs isScheduled, isRunning, isDone
 
@@ -255,6 +257,31 @@ getFrom (A a) = a.from
 -}
 getTo : Animation -> Float
 getTo (A a) = a.to
+
+{-| Equality on animations. Compared to `(==)` (which should not be used), this
+function handles the conversion of speed and duration, and start and delay. It
+also samples the easing functions, which may produce false positives (but
+usually not in practice).
+
+    -- These are True
+    animation 0 `equals` animation 0
+    (animation 0 |> delay 10) `equals` animation 10
+    (animation 0 |> duration 1000) `equals` (animation 0 |> speed 0.001)
+
+    -- These are False
+    static 0 `equals` animation 0
+    (animation 0 |> from -1) `equals` animation 0
+    (animation 0 |> ease identity) `equals` animation 0
+-}
+equals : Animation -> Animation -> Bool
+equals (A a) (A b) =
+    a.start + a.delay == b.start + b.delay &&
+    a.from == b.from &&
+    a.to == b.to &&
+    a.ramp == b.ramp &&
+    (a.dos == b.dos || 0.001 >= abs (dur a.dos a.from a.to - dur b.dos b.from b.to)) &&
+    List.all (\t -> a.ease t == b.ease t) [0.1, 0.3, 0.7, 0.9]
+
 
 {-| Determine if an animation is scheduled, meaning that it has not yet changed value.
 -}
