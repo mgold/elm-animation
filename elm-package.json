@@ -1,6 +1,6 @@
 {
-    "version": "0.0.0",
-    "summary": "Animated values that fit in your program",
+    "version": "1.0.0",
+    "summary": "Easy but powerful animation of values over time",
     "repository": "https://github.com/mgold/elm-animation.git",
     "license": "BSD3",
     "source-directories": [
@@ -8,7 +8,7 @@
     ],
     "exposed-modules": ["Animation"],
     "dependencies": {
-        "Dandandan/Easing": "1.0.3 <= v < 2.0.0",
+        "Dandandan/Easing": "1.0.3 <= v < 3.0.0",
         "elm-lang/core": "2.0.1 <= v < 3.0.0"
     },
     "elm-version": "0.15.0 <= v < 0.16.0"
