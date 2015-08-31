@@ -52,7 +52,9 @@ step act model = case act of
                                       , state <- Growing}
                            | otherwise -> model
     MouseClick pos -> if collided pos model
-                      then {model| r <- (retarget model.clock 0 model.r |> duration 750), state <- Exiting }
+                      then {model| r <- retarget model.clock 0 model.r |> duration 750,
+                                   theta <- retarget model.clock (degrees 45) model.theta |> duration 750,
+                                   state <- Exiting }
                       else model
 
 actions : Signal Action

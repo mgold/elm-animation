@@ -147,13 +147,13 @@ retained (but you can change it with `ease`). A new speed and duration will be c
 smooth. If you retarget multiple animations at once (e.g. x and y), you will need to sync their durations (perhaps to
 the `timeRemaining` in the old animations).
 
-It is safe to retarget animations that are scheduled (the `to` value is replaced), or done (`from` becomes the old `to`;
-`to` and `start` are set to the values provided).
+If the retargeted animation is still scheduled, the `to` value is replaced. If it is already done, `from` becomes the
+old `to`, `to` and `start` are set to the values provided, and the delay is set to zero.
 -}
 retarget : Time -> Float -> Animation -> Animation
 retarget t newTo (A a as u) =
     if | isScheduled t u -> A {a| to <- newTo, ramp <- Nothing}
-       | isDone t u -> A {a| start <- t, from <- a.to, to <- newTo, ramp <- Nothing}
+       | isDone t u -> A {a| start <- t, from <- a.to, to <- newTo, delay <- 0, ramp <- Nothing}
        | a.from == a.to -> A {a| start <- t, to <- newTo, dos <- defaultDuration, ramp <- Nothing}
        | otherwise ->
             let vel = velocity t u
