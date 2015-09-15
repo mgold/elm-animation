@@ -1,3 +1,22 @@
+{-| A blue ball moves towards wherever you click.
+  Shown onscreen:
+    * Blue ball: current position of object
+    * Green line: velocity vector
+    * Red line: acceleration vector
+    * Orange dots: location sampled at regular intervals
+    * Purple squares: destinations (current one is darker)
+  Controls:
+    * Click to set destination (including while ball is in motion)
+    * Shift to slow down time
+    * Space to see the interpolated past and future
+    * Enter to clear the history
+  Notice:
+    * When not retargeted, the velocity and acceleration vectors are in the line of travel
+    * When retargeted, acceleration changes instantly but velocity does not
+    * When retargeted, the interpolated past and future change but the present does not.
+    * Each trip takes a constant duration, meaning shorter trips are slower. One could instead specify speed.
+-}
+
 import Color exposing (Color)
 import Graphics.Element as E exposing (Element)
 import Graphics.Collage as C exposing (Form)
@@ -8,8 +27,6 @@ import Window
 import Debug
 
 import Animation exposing (..)
-
-{-| docs -}
 
 mouseLocation : Signal (Float, Float)
 mouseLocation =
@@ -49,7 +66,7 @@ update : Action -> Model -> Model
 update action model =
     case action of
         Tick dt -> updateTick dt model
-        Click pos -> {model| clicks <- pos::model.clicks
+        Click pos -> {model| clicks <- pos::model.clicks --                 sync durations, very important
                            , x <- retarget model.clock (fst pos) model.x |> duration dur
                            , y <- retarget model.clock (snd pos) model.y |> duration dur
                            }
@@ -73,6 +90,7 @@ updateTick dt model =
             Nothing -> [pos]
             Just pos' -> if close (fst pos) (fst pos') && close (snd pos) (snd pos') || recentlyClicked
                          then model.trail
+                         -- find the position for the time of the dot rather than using the current one
                          else (animate lastClickTime model.x, animate lastClickTime model.y) :: model.trail
 
     in {model| clock <- clock, trail <- trail, lastClickTime <- lastClickTime}
@@ -122,10 +140,10 @@ renderClicks {clicks} =
     List.indexedMap
         (\i pos -> C.square 12 |> C.filled (if i == 0 then Color.purple else Color.lightPurple) |> C.move pos)
         clicks
+
 thick : Color -> C.Path -> Form
 thick c =
     let style = C.solid c
     in C.traced {style| width <- 2}
 
 main = Signal.map2 render Window.dimensions model
---main = Signal.map E.show model
