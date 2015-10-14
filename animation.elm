@@ -106,11 +106,11 @@ spd dos from to =
 defaultDuration : DurationOrSpeed
 defaultDuration = Duration (750 * Time.millisecond)
 
-{-| Create an animation that begins now. By default, animations have no delay, last 750ms, and interpolate between 0 and
-1 with a sinusoidal easing function. All of these can be changed.
+{-| Create an animation that begins at the given time. By default, animations have no delay, last 750ms, and interpolate
+between 0 and 1 with a sinusoidal easing function. All of these can be changed.
 -}
 animation : Time -> Animation
-animation now = A <| AnimRecord now 0 defaultDuration Nothing Dan.easeInOutSine 0 1
+animation t = A <| AnimRecord t 0 defaultDuration Nothing Dan.easeInOutSine 0 1
 
 {-| Create a static animation that is always the given value.
 -}
