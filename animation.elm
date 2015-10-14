@@ -153,14 +153,14 @@ are the same, the animation is unchanged.
 -}
 retarget : Time -> Float -> Animation -> Animation
 retarget t newTo (A a as u) =
-    if | newTo == a.to -> u
-       | isScheduled t u -> A {a| to <- newTo, ramp <- Nothing}
-       | isDone t u -> A {a| start <- t, from <- a.to, to <- newTo, delay <- 0, ramp <- Nothing}
-       | a.from == a.to -> A {a| start <- t, to <- newTo, dos <- defaultDuration, ramp <- Nothing}
-       | otherwise ->
-            let vel = velocity t u
-                pos = animate t u
-            in A <| AnimRecord t 0 (Speed (abs vel/3)) (Just vel) a.ease pos newTo
+    if newTo == a.to then u
+    else if a.from == a.to {-static-} then A {a| start <- t, to <- newTo, dos <- defaultDuration, ramp <- Nothing}
+    else if isScheduled t u then A {a| to <- newTo, ramp <- Nothing}
+    else if isDone t u then A {a| start <- t, delay <- 0, from <- a.to, to <- newTo, ramp <- Nothing}
+    else
+      let vel = velocity t u
+          pos = animate t u
+      in A <| AnimRecord t 0 (Speed (abs vel/3)) (Just vel) a.ease pos newTo
 
 {-| Set the duration of an animation to the time specified. This setting overrides, and is overriden by, `speed` (last
 application wins). Note that the `Time` argument is _not_ the current running time but the duration to be set.
