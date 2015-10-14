@@ -160,7 +160,7 @@ retarget t newTo (A a as u) =
        | otherwise ->
             let vel = velocity t u
                 pos = animate t u
-            in A <| AnimRecord t 0 (Speed (vel/3)) (Just vel) a.ease pos newTo
+            in A <| AnimRecord t 0 (Speed (abs vel/3)) (Just vel) a.ease pos newTo
 
 {-| Set the duration of an animation to the time specified. This setting overrides, and is overriden by, `speed` (last
 application wins). Note that the `Time` argument is _not_ the current running time but the duration to be set.
