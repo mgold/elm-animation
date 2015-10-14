@@ -25,7 +25,7 @@ Once you have your value at the current time, you can render it to any frontend 
 # Basic Usage
 
 `animation` creates an animation starting at the given time (usually the current time). `animate` takes the current time
-and an animation and produces the current value.
+and an animation, and produces the current value.
 
 ````elm
 import Animation exposing (..)
