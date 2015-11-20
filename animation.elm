@@ -147,8 +147,8 @@ undo t (A a as u) =
           ease = (\t -> 1 - (a.ease (1 - t)))}
 
 {-| Change the `to` value of a running animation, without an abrupt change in velocity. The easing function will be
-retained (but you can change it with `ease`). A new speed and duration will be chosen based on what makes the animation
-smooth. If you retarget multiple animations at once (e.g. x and y), you will need to sync their durations (perhaps to
+retained (but you can change it with `ease`). The animation will retain its average speed (but not necessarily
+duration). If you retarget multiple animations at once (e.g. x and y), you will need to sync their durations (perhaps to
 the `timeRemaining` in the old animations).
 
 If the retargeted animation is still scheduled, the `to` value is replaced. If it is already done, `from` becomes the
@@ -164,7 +164,10 @@ retarget t newTo (A a as u) =
     else
       let vel = velocity t u
           pos = animate t u
-      in A <| AnimRecord t 0 (Speed (abs vel/3)) (Just vel) a.ease pos newTo
+          newSpeed = case a.dos of
+            Speed _ -> a.dos -- avoid recreating this object
+            Duration _ -> Speed (spd a.dos a.from a.to)
+      in A <| AnimRecord t 0 newSpeed (Just vel) a.ease pos newTo
 
 {-| Set the duration of an animation to the time specified. This setting overrides, and is overriden by, `speed` (last
 application wins). Note that the `Time` argument is _not_ the current running time but the duration to be set.
