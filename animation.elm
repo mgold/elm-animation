@@ -72,7 +72,6 @@ You may set an animation's duration or speed but not both, since one determines 
 -}
 
 import Time exposing (Time)
-import Easing as Dan
 
 -- private
 type DurationOrSpeed = Duration Time | Speed Float
@@ -106,16 +105,20 @@ spd dos from to =
 defaultDuration : DurationOrSpeed
 defaultDuration = Duration (750 * Time.millisecond)
 
+--private
+defaultEase : Float -> Float
+defaultEase x = (1 - cos (pi*x))/2
+
 {-| Create an animation that begins at the given time. By default, animations have no delay, last 750ms, and interpolate
 between 0 and 1 with a sinusoidal easing function. All of these can be changed.
 -}
 animation : Time -> Animation
-animation t = A <| AnimRecord t 0 defaultDuration Nothing Dan.easeInOutSine 0 1
+animation t = A <| AnimRecord t 0 defaultDuration Nothing defaultEase 0 1
 
 {-| Create a static animation that is always the given value.
 -}
 static : Float -> Animation
-static x = A <| AnimRecord 0 0 (Duration 0) Nothing Dan.easeInOutSine x x
+static x = A <| AnimRecord 0 0 (Duration 0) Nothing defaultEase x x
 
 {-| Produce the value of an animation at a given time.
 -}
@@ -126,9 +129,10 @@ animate t (A {start, delay, dos, ramp, from, to, ease})  =
         eased = ease fr
         correction = case ramp of
             Nothing -> 0
-            Just vel -> let eased' = Dan.easeInOutSine fr -- always use cosine ease for this
+            Just vel -> let eased' = defaultEase fr -- always use cosine ease for this
                             from' = vel * (t - start)
                         in from' - from'*eased'
+    -- TODO do we properly interpolate when the easing function isn't a sinusoid?
     in from + (to-from)*eased + correction
 
 {-| Run an animation in reverse from its current state, beginning immediately (even if the animation was delayed or has
@@ -139,8 +143,8 @@ undone animation is frequently not what you want.
 -}
 undo : Time -> Animation -> Animation
 undo t (A a as u) =
-    A {a| from <- a.to, to <- a.from, start <- t, delay <- -(timeRemaining t u), ramp <- Nothing,
-          ease <- (\t -> 1 - (a.ease (1 - t)))}
+    A {a| from = a.to, to = a.from, start = t, delay = -(timeRemaining t u), ramp = Nothing,
+          ease = (\t -> 1 - (a.ease (1 - t)))}
 
 {-| Change the `to` value of a running animation, without an abrupt change in velocity. The easing function will be
 retained (but you can change it with `ease`). A new speed and duration will be chosen based on what makes the animation
@@ -154,9 +158,9 @@ are the same, the animation is unchanged.
 retarget : Time -> Float -> Animation -> Animation
 retarget t newTo (A a as u) =
     if newTo == a.to then u
-    else if a.from == a.to {-static-} then A {a| start <- t, to <- newTo, dos <- defaultDuration, ramp <- Nothing}
-    else if isScheduled t u then A {a| to <- newTo, ramp <- Nothing}
-    else if isDone t u then A {a| start <- t, delay <- 0, from <- a.to, to <- newTo, ramp <- Nothing}
+    else if a.from == a.to {-static-} then A {a| start = t, to = newTo, dos = defaultDuration, ramp = Nothing}
+    else if isScheduled t u then A {a| to = newTo, ramp = Nothing}
+    else if isDone t u then A {a| start = t, delay = 0, from = a.to, to = newTo, ramp = Nothing}
     else
       let vel = velocity t u
           pos = animate t u
@@ -166,7 +170,7 @@ retarget t newTo (A a as u) =
 application wins). Note that the `Time` argument is _not_ the current running time but the duration to be set.
 -}
 duration : Time -> Animation -> Animation
-duration x (A a) = A {a| dos <- Duration x}
+duration x (A a) = A {a| dos = Duration x}
 
 {-| Set the _average_ speed of an animation. Speed is the rate at which the animation progresses between the `from` and
 `to` values per milisecond. Most easing functions will deviate from the average speed. You do not need to worry about
@@ -174,31 +178,31 @@ the sign. It is safe to alter the `from` and `to` values after setting speed, bu
 `duration`.
 -}
 speed : Float -> Animation -> Animation
-speed x (A a) = A {a| dos <- Speed (abs x)}
+speed x (A a) = A {a| dos = Speed (abs x)}
 
 {-| Set the delay of an animation to the time specified. An animation will not start until after the delay. The default
 delay is 0. Note that the `Time` argument is _not_ the current running time but the delay to be set.
 -}
 delay : Time -> Animation -> Animation
-delay x (A a) = A {a| delay <- x}
+delay x (A a) = A {a| delay = x}
 
 {-| Set the easing function of an animation. It is expected that `f 0 == 0` and `f 1 == 1`. The default is a sinusoidal
 in-out.
 -}
 ease : (Float -> Float) -> Animation -> Animation
-ease x (A a) = A {a| ease <- x}
+ease x (A a) = A {a| ease = x}
 
 {-| Set the initial value of an animation. The default is 0.
 -}
 from : Float -> Animation -> Animation
-from x (A a) = A {a| from <- x, ramp <- Nothing}
+from x (A a) = A {a| from = x, ramp = Nothing}
 
 {-| Set the final value of an animation. The default is 1.
 
 For animations that are already running, use `retarget`.
 -}
 to : Float -> Animation -> Animation
-to x (A a) = A {a| to <- x, ramp <- Nothing}
+to x (A a) = A {a| to = x, ramp = Nothing}
 
 {-| Get the time elapsed since the animation started playing (after the end of delay). Will be zero for animations that
 are still scheduled, and is not bounded for animations that are already done.
