@@ -66,15 +66,15 @@ update : Action -> Model -> Model
 update action model =
     case action of
         Tick dt -> updateTick dt model
-        Click pos -> {model| clicks <- pos::model.clicks --                 sync durations, very important
-                           , x <- retarget model.clock (fst pos) model.x |> duration dur
-                           , y <- retarget model.clock (snd pos) model.y |> duration dur
+        Click pos -> {model| clicks = pos::model.clicks --                 sync durations, very important
+                           , x = retarget model.clock (fst pos) model.x |> duration dur
+                           , y = retarget model.clock (snd pos) model.y |> duration dur
                            }
-        Reset -> {model | clicks <- List.head model.clicks |> Maybe.map (\c -> [c]) |> Maybe.withDefault []
-                        , trail <- []
+        Reset -> {model | clicks = List.head model.clicks |> Maybe.map (\c -> [c]) |> Maybe.withDefault []
+                        , trail = []
                  }
-        Slow b -> {model | slow <- b}
-        Smear b -> {model | smear <- b}
+        Slow b -> {model | slow = b}
+        Smear b -> {model | smear = b}
         NoOp -> model
 
 
@@ -93,7 +93,7 @@ updateTick dt model =
                          -- find the position for the time of the dot rather than using the current one
                          else (animate lastClickTime model.x, animate lastClickTime model.y) :: model.trail
 
-    in {model| clock <- clock, trail <- trail, lastClickTime <- lastClickTime}
+    in {model| clock = clock, trail = trail, lastClickTime = lastClickTime}
         |> Debug.watchSummary "Bullet Time" .slow
         |> Debug.watchSummary "Smeared Time" .smear
         |> Debug.watchSummary "Animation ends in" (\{clock, x} -> (timeRemaining clock x)/1000)
@@ -144,6 +144,6 @@ renderClicks {clicks} =
 thick : Color -> C.Path -> Form
 thick c =
     let style = C.solid c
-    in C.traced {style| width <- 2}
+    in C.traced {style| width = 2}
 
 main = Signal.map2 render Window.dimensions model

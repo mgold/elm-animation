@@ -8,12 +8,10 @@ import Graphics.Element exposing (Element)
 import Time exposing (Time)
 import Window
 
-import Easing
-
 import Animation exposing (..)
 
--- asymmetric
-myEase = Easing.easeInCubic
+-- asymmetric ease in cubic
+myEase x = x*x*x
 
 type alias Model = { x : Animation, clock : Time, undone : Bool, dotsOut : List Float, dotsBack : List Float }
 model0 = Model (animation 0 |> duration 4000 |> ease myEase) 0 False [] []
@@ -23,10 +21,10 @@ step dt model =
     let clock = model.clock + dt
         pos = animate clock model.x
     in if not model.undone && pos > 0.999
-       then {model | x <- undo clock model.x, undone <- True, dotsOut <- pos :: model.dotsOut, dotsBack <- [pos], clock <- clock}
+       then {model | x = undo clock model.x, undone = True, dotsOut = pos :: model.dotsOut, dotsBack = [pos], clock = clock}
        else if not model.undone
-       then {model | dotsOut <- pos :: model.dotsOut, clock <- clock}
-       else {model | dotsBack <- pos :: model.dotsBack, clock <- clock}
+       then {model | dotsOut = pos :: model.dotsOut, clock = clock}
+       else {model | dotsBack = pos :: model.dotsBack, clock = clock}
 
 model : Signal Model
 model = Signal.foldp step model0 (Time.fps 20)

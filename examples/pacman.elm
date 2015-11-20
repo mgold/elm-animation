@@ -38,7 +38,7 @@ step dt model =
         moveDone = isDone clock model.x && isDone clock model.y
         x = if moveDone then undo clock model.x else model.x
         y = if moveDone then undo clock model.y |> delay Time.second else model.y
-    in {model| clock <- clock, r <- r, x <- x, y <- y}
+    in {model| clock = clock, r = r, x = x, y = y}
 
 model : Signal Model
 model = Signal.foldp step model0 (Time.fps 60)

@@ -35,16 +35,16 @@ slideLen = 500
 update : Action -> Model -> Model
 update action model =
     case action of
-        Tick dt -> {model| clock <- model.clock + dt}
+        Tick dt -> {model| clock = model.clock + dt}
         Click -> if model.initial
                  then let a = animation model.clock |> from 0 |> to slideLen |> duration (1.2 * Time.second)
-                      in {model| a1 <- a, a2 <- a, a3 <- a, initial <- False }
+                      in {model| a1 = a, a2 = a, a3 = a, initial = False }
                  else let t = model.clock
                           setDur = duration (750 * Time.millisecond)
                           dest = getFrom model.a1
-                      in {model| a1 <- animation t |> from (getTo model.a1) |> to dest |> setDur,
-                                 a2 <- animation t |> from (animate t model.a2) |> to dest |> setDur,
-                                 a3 <- retarget t dest model.a3 |> setDur
+                      in {model| a1 = animation t |> from (getTo model.a1) |> to dest |> setDur,
+                                 a2 = animation t |> from (animate t model.a2) |> to dest |> setDur,
+                                 a3 = retarget t dest model.a3 |> setDur
                          }
 
 model : Signal Model

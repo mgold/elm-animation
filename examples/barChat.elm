@@ -12,11 +12,9 @@ import Animation exposing (..)
 
 data : List Int
 data =
-    let gen = Random.int 1 12
+    let gen = Random.int 1 12 |> Random.list 20
         seed = Random.initialSeed 42000
-    in List.scanl (\_ (_, s) -> Random.generate gen s) (0, seed) [1..20]
-        |> List.map fst
-        |> List.tail |> (\(Just t) -> t)
+    in Random.generate gen seed |> fst
 
 animations : List Animation
 animations =

@@ -13,8 +13,6 @@ import Graphics.Input as I
 import Time exposing (Time, second)
 import Mouse
 
-import Easing
-
 import Animation exposing (..)
 
 width = animation 0 |> from 10 |> to 300 |> duration (0.67*second)
@@ -48,34 +46,48 @@ update action model =
     case action of
         Tick dt ->
             let newTrueClock =   model.trueClock + dt
-            in {model| trueClock <- newTrueClock
-                     , arisClock <- model.arisClock + dt*(if model.forward then 1 else -1) -- always 1 or -1
-                     , newtClock <- model.newtClock + dt*(animate newTrueClock model.newtFactor) -- often between 1 or -1
+            in {model| trueClock = newTrueClock
+                     , arisClock = model.arisClock + dt*(if model.forward then 1 else -1) -- always 1 or -1
+                     , newtClock = model.newtClock + dt*(animate newTrueClock model.newtFactor) -- often between 1 or -1
                      }
         Click ->
             if model.forward
-            then {model| forward <- False
-                       , newtFactor <-
+            then {model| forward = False
+                       , newtFactor =
                            if model.newtClock > second -- skip tweening if restarting animation from rest
                            then static -1
                            else animateRev |> delay model.trueClock
-                       , arisClock <- min model.arisClock second -- reset clocks that have gotten really big
-                       , newtClock <- min model.newtClock second -- but keep them if we're still animating
+                       , arisClock = min model.arisClock second -- reset clocks that have gotten really big
+                       , newtClock = min model.newtClock second -- but keep them if we're still animating
                        }
-            else {model| forward <- True -- works exactly opposite the other case
-                       , newtFactor <-
+            else {model| forward = True -- works exactly opposite the other case
+                       , newtFactor =
                            if model.newtClock < 0
                            then static 1
                            else animateFwd |> delay model.trueClock
-                       , arisClock <- max model.arisClock 0
-                       , newtClock <- max model.newtClock 0
+                       , arisClock = max model.arisClock 0
+                       , newtClock = max model.newtClock 0
                        }
 
 model : Signal Model
 model = Signal.foldp update model0 actions
 
+-- copied from Dan's library
+float from to v =
+    from + (to - from) * v
+
+colorEase from to v =
+    let
+        (rgb1, rgb2)     = (Color.toRgb from, Color.toRgb to)
+        (r1, g1, b1, a1) = (rgb1.red, rgb1.green, rgb1.blue, rgb1.alpha)
+        (r2, g2, b2, a2) = (rgb2.red, rgb2.green, rgb2.blue, rgb2.alpha)
+        float' from to v = round (float (toFloat from) (toFloat to) v)
+    in
+        Color.rgba (float' r1 r2 v) (float' g1 g2 v) (float' b1 b2 v) (float a1 a2 v)
+
+
 easeColor : Float -> Color
-easeColor = Easing.color Color.purple (Color.rgb 74 178 182)
+easeColor = colorEase Color.purple (Color.rgb 74 178 182)
 
 padding : Element
 padding = E.spacer 50 50

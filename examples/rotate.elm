@@ -26,19 +26,19 @@ actions = Signal.merge
 
 step : Action -> Model -> Model
 step act model = case act of
-    Tick dt -> {model| clock <- model.clock + dt}
+    Tick dt -> {model| clock = model.clock + dt}
     Click (dest_r, dest_theta) ->
         let theta = retarget model.clock dest_theta model.theta |> speed 0.002 |> normalizeAngle
             r = retarget model.clock (min armLength dest_r) model.r |> speed 0.4
             dur = max (getDuration theta) (getDuration r)
-        in {model| theta <- theta |> duration dur, r <- r |> duration dur}
+        in {model| theta = theta |> duration dur, r = r |> duration dur}
 
 normalizeAngle anim =
     let from = getFrom anim
         to = getTo anim
-    in if | abs (from - to) < (degrees 180) -> anim
-          | to < from -> normalizeAngle <| Animation.to (to + turns 1) anim
-          | to > from -> normalizeAngle <| Animation.to (to - turns 1) anim
+    in if abs (from - to) < (degrees 180) then anim
+       else if to < from then normalizeAngle <| Animation.to (to + turns 1) anim
+       else normalizeAngle <| Animation.to (to - turns 1) anim
 
 model : Signal Model
 model = Signal.foldp step model0 actions

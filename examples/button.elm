@@ -37,24 +37,26 @@ step act model = case act of
                     Gone -> if isRunning clock model.r then Entering else Gone
                     _ -> model.state
               in if model.state == Gone && radiusDone
-                 then {model| clock <- clock, r <- (animation clock |> from 0 |> to here_r |> delay 1500)}
-                 else {model| clock <- clock, state <- state}
+                 then {model| clock = clock, r = (animation clock |> from 0 |> to here_r |> delay 1500)}
+                 else {model| clock = clock, state = state}
+
     MouseMove pos -> let now = model.clock
                          collision = collided pos model
                          growingOrBig = model.state == Growing || model.state == Big
-                     in if | not collision && growingOrBig ->
-                                {model| r <- undo now model.r
-                                      , theta <- undo now model.theta
-                                      , state <- Shrinking}
-                           | collision && model.state == Here ->
-                                {model| r <- retarget now big_r model.r |> duration 150
-                                      , theta <- retarget now (degrees -45) model.theta |> duration 200
-                                      , state <- Growing}
-                           | otherwise -> model
+                     in if not collision && growingOrBig
+                        then {model| r = undo now model.r
+                                   , theta = undo now model.theta
+                                   , state = Shrinking}
+                        else if collision && model.state == Here
+                        then {model| r = retarget now big_r model.r |> duration 150
+                                   , theta = retarget now (degrees -45) model.theta |> duration 200
+                                   , state = Growing}
+                        else model
+
     MouseClick pos -> if collided pos model
-                      then {model| r <- retarget model.clock 0 model.r |> duration 750,
-                                   theta <- retarget model.clock (degrees 45) model.theta |> duration 750,
-                                   state <- Exiting }
+                      then {model| r = retarget model.clock 0 model.r |> duration 750,
+                                   theta = retarget model.clock (degrees 45) model.theta |> duration 750,
+                                   state = Exiting }
                       else model
 
 actions : Signal Action
