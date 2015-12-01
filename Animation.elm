@@ -1,14 +1,17 @@
 module Animation (Animation, animation, static, animate, duration, speed, delay, ease, from, to, undo, retarget, getStart, getDuration, getSpeed, getDelay, getEase, getFrom, getTo, equals, velocity, timeElapsed, timeRemaining, isScheduled, isRunning, isDone) where
 
-{-| A library for animating between two Float values. For example, animate a panel's width from 100px to 300px over 2
-seconds, or make a button spin and grow on hover. Everything is a pure function, no signals in sight, so you can use it
+{-| A library for animating between two `Float` values. For example, animate a panel's width from 100px to 300px over 2
+seconds, or make a button spin and grow on hover. Everything is a pure function (no signals or tasks), so you can use it
 easily within your architecture. You can also inspect animations to determine if they are still running and for how
 long, and even smoothly retarget a different destination midflight.
 
 The library encapsulates a 3-stage animation pipeline:
-* **Timekeeping:** You are expected to maintain a running clock, which could be as simple as `Signal.foldp (+) 0 (Time.fps 30)`
-    or part of your state and action types. You use this clock to create an animation and again to obtain the current
-    value. You can also specify a delay and the duration for your animation.
+
+* **Timekeeping:** You are expected to maintain a running clock. If you are using `elm-effects`, request `Effects.tick`
+    with an action to store the clock in the model. Otherwise, use `Time.fps` or `AnimationFrame.frame`, which provide
+    time *deltas* that you will have to sum either in your model or with using `Signal.foldp (+) 0`. However obtained,
+    this clock is used to create an animation and again to obtain the current value. You can also specify a delay and
+    the duration for your animation.
 
 * **Easing:** An easing function is what makes an animation come alive with acceleration and sometimes even elasticity.
     When setting the easing function for your animation, I recommend [Dan's
@@ -20,12 +23,12 @@ The library encapsulates a 3-stage animation pipeline:
     values per milisecond) instead of a duration.
 
 Once you have your value at the current time, you can render it to any frontend you choose: Collage, Element, Html,
-[turtles](http://package.elm-lang.org/packages/mgold/elm-turtle-graphics/latest)...
+[Turtles](http://package.elm-lang.org/packages/mgold/elm-turtle-graphics/latest)...
 
-# Basic Usage
-
+## Basic Usage
 `animation` creates an animation starting at the given time (usually the current time). `animate` takes the current time
-and an animation, and produces the current value.
+and an animation, and produces the current value. Animations go through three phases (not related to the three stages of
+rendering): they are scheduled, they run, and then they are done.
 
 ````elm
 import Animation exposing (..)
@@ -35,9 +38,10 @@ myAnim = animation 0 |> from 100 |> to 300 |> duration (4*second) |> delay (1*se
 List.map (\t -> animate (t*second) myAnim) [0..6]
 -- [100, 100, 129.29, 200, 270.71, 300, 300]
 ````
-Notice that the value remains constant during the delay and after the animation is done, and that sinusoidal easing
-in and out is applied by default. Animations go through three phases (not related to the three stages of rendering):
-they are scheduled, they run, and then they are done.
+
+Notice that the value remains constant during the delay and after the animation is done. You can also use `static` to
+create animations of constant value. By using these two degenerate cases, you ought to be able to keep animations in
+your model without worrying about when they aren't actually animating.
 
 # Create
 @docs animation, static
@@ -151,7 +155,7 @@ retained (but you can change it with `ease`). The animation will retain its aver
 duration). If you retarget multiple animations at once (e.g. x and y), you will need to sync their durations (perhaps to
 the `timeRemaining` in the old animations).
 
-If the retargeted animation is still scheduled, the `to` value is replaced. If it is already done, `from` becomes the
+If the retargeted animation is still scheduled, the `to` value is replaced. If it's already done, `from` becomes the
 old `to`, `to` and `start` are set to the values provided, and the delay is set to zero. If the old and new `to` values
 are the same, the animation is unchanged.
 -}
@@ -169,16 +173,15 @@ retarget t newTo (A a as u) =
             Duration _ -> Speed (spd a.dos a.from a.to)
       in A <| AnimRecord t 0 newSpeed (Just vel) a.ease pos newTo
 
-{-| Set the duration of an animation to the time specified. This setting overrides, and is overriden by, `speed` (last
-application wins). Note that the `Time` argument is _not_ the current running time but the duration to be set.
+{-| Set the duration of an animation to the time specified. Note that the `Time` argument is _not_ the current running
+time but the duration to be set.
 -}
 duration : Time -> Animation -> Animation
 duration x (A a) = A {a| dos = Duration x}
 
 {-| Set the _average_ speed of an animation. Speed is the rate at which the animation progresses between the `from` and
 `to` values per milisecond. Most easing functions will deviate from the average speed. You do not need to worry about
-the sign. It is safe to alter the `from` and `to` values after setting speed, but a set speed will be overwritten by
-`duration`.
+the sign. It is safe to alter the `from` and `to` values after setting speed.
 -}
 speed : Float -> Animation -> Animation
 speed x (A a) = A {a| dos = Speed (abs x)}
@@ -231,8 +234,8 @@ velocity t u =
         forwDiff = animate (t+10) u
     in (forwDiff - backDiff) / 20
 
-{-| Get the start time of the animation, the argument to `animate`. For interrupted animations, this is when the
-interruption occured.
+{-| Get the start time of the animation, not accounting for delay. For animations created with `animate`, this is the
+argument that was passed. For interrupted animations, this is when the interruption occured.
 -}
 getStart : Animation -> Time
 getStart (A a) = a.start
