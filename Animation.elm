@@ -161,11 +161,15 @@ are the same, the animation is unchanged.
 -}
 retarget : Time -> Float -> Animation -> Animation
 retarget t newTo (A a as u) =
-    if newTo == a.to then u
-    else if a.from == a.to {-static-} then A {a| start = t, to = newTo, dos = defaultDuration, ramp = Nothing}
-    else if isScheduled t u then A {a| to = newTo, ramp = Nothing}
-    else if isDone t u then A {a| start = t, delay = 0, from = a.to, to = newTo, ramp = Nothing}
-    else
+    if newTo == a.to then
+      u
+    else if a.from == a.to then -- static animations
+      A {a| start = t, to = newTo, dos = defaultDuration, ramp = Nothing}
+    else if isScheduled t u then
+      A {a| to = newTo, ramp = Nothing}
+    else if isDone t u then
+      A {a| start = t, delay = 0, from = a.to, to = newTo, ramp = Nothing}
+    else -- it's running
       let vel = velocity t u
           pos = animate t u
           newSpeed = case a.dos of
