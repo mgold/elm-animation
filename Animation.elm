@@ -122,7 +122,7 @@ animation t = A <| AnimRecord t 0 defaultDuration Nothing defaultEase 0 1
 {-| Create a static animation that is always the given value.
 -}
 static : Float -> Animation
-static x = A <| AnimRecord 0 0 (Duration 0) Nothing defaultEase x x
+static x = A <| AnimRecord 0 0 defaultDuration Nothing defaultEase x x
 
 {-| Produce the value of an animation at a given time.
 -}
@@ -163,8 +163,8 @@ retarget : Time -> Float -> Animation -> Animation
 retarget t newTo (A a as u) =
     if newTo == a.to then
       u
-    else if a.from == a.to then -- static animations
-      A {a| start = t, to = newTo, dos = defaultDuration, ramp = Nothing}
+    else if isStatic u then
+      A {a| start = t, to = newTo, ramp = Nothing}
     else if isScheduled t u then
       A {a| to = newTo, ramp = Nothing}
     else if isDone t u then
@@ -299,22 +299,28 @@ equals (A a) (A b) =
     List.all (\t -> a.ease t == b.ease t) [0.1, 0.3, 0.7, 0.9]
 
 
+-- private, currently. Any value in exporting?
+isStatic : Animation -> Bool
+isStatic (A {from, to}) =
+  from == to
+
 {-| Determine if an animation is scheduled, meaning that it has not yet changed value.
 -}
 isScheduled : Time -> Animation -> Bool
-isScheduled t (A {start, delay}) =
-    t <= start+delay
+isScheduled t (A {start, delay} as u) =
+    t <= start+delay && not (isStatic u)
 
 {-| Determine if an animation is running, meaning that it is currently changing value.
 -}
 isRunning : Time -> Animation -> Bool
-isRunning t (A {start, delay, dos, from, to}) =
+isRunning t (A {start, delay, dos, from, to} as u) =
     let duration = dur dos from to
-    in t > start+delay && t < start+delay+duration
+    in t > start+delay && t < start+delay+duration && not (isStatic u)
 
-{-| Determine if an animation is done, meaning that it has arrived at its final value.
+{-| Determine if an animation is done, meaning that it has arrived at its final value. Static animations are always
+done.
 -}
 isDone : Time -> Animation -> Bool
-isDone t (A {start, delay, dos, from, to}) =
+isDone t (A {start, delay, dos, from, to} as u) =
     let duration = dur dos from to
-    in t >= start+delay+duration
+    in isStatic u || t >= start+delay+duration
