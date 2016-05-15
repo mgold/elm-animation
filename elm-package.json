@@ -1,5 +1,5 @@
 {
-    "version": "1.0.3",
+    "version": "1.0.4",
     "summary": "Easy but powerful animation of values over time",
     "repository": "https://github.com/mgold/elm-animation.git",
     "license": "BSD3",
