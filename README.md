@@ -6,16 +6,12 @@ long, and even smoothly retarget a different destination midflight.
 
 The library encapsulates a 3-stage animation pipeline:
 
-* **Timekeeping:** You are expected to maintain a running clock. If you are using `elm-effects`, request `Effects.tick`
-    with an action to store the clock in the model. Otherwise, use `Time.fps` or `AnimationFrame.frame`, which provide
-    time *deltas* that you will have to sum either in your model or with using `Signal.foldp (+) 0`. However obtained,
-    this clock is used to create an animation and again to obtain the current value. You can also specify a delay and
-    the duration for your animation.
+* **Timekeeping:** Creating and running an animation requires the current time, which is best obtained with
+    [`AnimationFrame.times`](http://package.elm-lang.org/packages/elm-lang/animation-frame/latest/AnimationFrame#times).
+    You can also specify the duration of animation, and delay it prior to starting.
 
-* **Easing:** An easing function is what makes an animation come alive with acceleration and sometimes even elasticity.
-    When setting the easing function for your animation, I recommend [Dan's
-    library](http://package.elm-lang.org/packages/Dandandan/Easing/latest/Easing#easing-functions). (Dan also has your
-    back if you need to interpolate pairs or colors with the output of this library.)
+* **Easing:** An easing function makes an animation come alive with acceleration or even elasticity. You can find all
+    kinds of crazy easing functions in [this library](http://package.elm-lang.org/packages/elm-community/easing-functions/latest/Ease).
 
 * **Interpolation:** It wouldn't be very useful is all animations went from 0 to 1 (the default), would it? You can
     specify values to animate `from` and `to`. Furthermore, you can set the average speed (distance between these two

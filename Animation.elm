@@ -8,12 +8,11 @@ long, and even smoothly retarget a different destination midflight.
 The library encapsulates a 3-stage animation pipeline:
 
 * **Timekeeping:** Creating and running an animation requires the current time, which is best obtained with
-    [AnimationFrame.times](http://package.elm-lang.org/packages/elm-lang/animation-frame/latest/AnimationFrame#times).
+    [`AnimationFrame.times`](http://package.elm-lang.org/packages/elm-lang/animation-frame/latest/AnimationFrame#times).
     You can also specify the duration of animation, and delay it prior to starting.
 
-* **Easing:** An easing function is what makes an animation come alive with acceleration and sometimes even elasticity.
-    When setting the easing function for your animation, I recommend [Dan's
-    library](http://package.elm-lang.org/packages/Dandandan/Easing/latest/Easing#easing-functions).
+* **Easing:** An easing function makes an animation come alive with acceleration or even elasticity. You can find all
+    kinds of crazy easing functions in [this library](http://package.elm-lang.org/packages/elm-community/easing-functions/latest/Ease).
 
 * **Interpolation:** It wouldn't be very useful is all animations went from 0 to 1 (the default), would it? You can
     specify values to animate `from` and `to`. Furthermore, you can set the average speed (distance between these two
