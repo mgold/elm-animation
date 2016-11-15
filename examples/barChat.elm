@@ -7,7 +7,7 @@ import Color exposing (gray, red)
 import Element exposing (Element, flow, down, right, spacer, color)
 import Time exposing (Time)
 import Random
-import Html.App exposing (program)
+import Html exposing (program)
 import AnimationFrame exposing (diffs)
 import Animation exposing (..)
 
@@ -21,7 +21,7 @@ data =
         seed =
             Random.initialSeed 42000
     in
-        Random.step gen seed |> fst
+        Random.step gen seed |> Tuple.first
 
 
 animations : List Animation

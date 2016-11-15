@@ -26,7 +26,7 @@ import Time exposing (Time)
 import Task exposing (Task)
 import AnimationFrame
 import Window
-import Html.App exposing (program)
+import Html exposing (program)
 import Animation exposing (..)
 
 
@@ -112,7 +112,7 @@ subs =
 
 main =
     program
-        { init = ( model0, Task.perform (always NoOp) Resize Window.size )
+        { init = ( model0, Task.perform Resize Window.size )
         , update = (\msg model -> ( update msg model, Cmd.none ))
         , subscriptions = always subs
         , view = scene >> Element.toHtml

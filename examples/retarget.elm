@@ -19,7 +19,6 @@ module Main exposing (..)
     * Each trip takes a constant duration, meaning shorter trips are slower. One could instead specify speed.
 -}
 
-import Char
 import Color exposing (Color)
 import Element as E exposing (Element)
 import Collage as C exposing (Form)
@@ -29,7 +28,7 @@ import Mouse
 import Keyboard
 import Window
 import AnimationFrame
-import Html.App exposing (program)
+import Html exposing (program)
 import Animation exposing (..)
 
 
@@ -185,8 +184,8 @@ updateTick dt model =
                 Nothing ->
                     [ pos ]
 
-                Just pos' ->
-                    if close pos.x pos'.x && close pos.y pos'.y || recentlyClicked then
+                Just pos_ ->
+                    if close pos.x pos_.x && close pos.y pos_.y || recentlyClicked then
                         model.trail
                         -- find the position for the time of the dot rather than using the current one
                     else
@@ -218,10 +217,10 @@ render model =
 renderBall model =
     let
         oneBall =
-            renderBall' model.clock model.x model.y
+            renderBall_ model.clock model.x model.y
     in
         if model.smear then
-            List.map (\t -> renderBall' (model.clock + t * 20) model.x model.y) [-5..5]
+            List.map (\t -> renderBall_ (model.clock + toFloat t * 20) model.x model.y) (List.range -5 5)
                 |> C.group
                 |> C.alpha 0.3
                 |> \gr -> C.group [ oneBall, gr ]
@@ -229,7 +228,7 @@ renderBall model =
             oneBall
 
 
-renderBall' clock x y =
+renderBall_ clock x y =
     let
         pos =
             ( animate clock x, animate clock y )
@@ -280,7 +279,7 @@ thick c =
 
 main =
     program
-        { init = ( model0, Task.perform (always NoOp) Resize Window.size )
+        { init = ( model0, Task.perform Resize Window.size )
         , update = (\msg model -> ( update msg model, Cmd.none ))
         , subscriptions = always subs
         , view = render >> E.toHtml

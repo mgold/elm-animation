@@ -6,7 +6,7 @@ import Time exposing (Time)
 import Text
 import Mouse
 import AnimationFrame
-import Html.App exposing (program)
+import Html exposing (program)
 import Animation exposing (..)
 
 
@@ -100,28 +100,27 @@ render model =
         slider w =
             E.layers
                 [ E.spacer (slideLen + h) h |> E.color Color.lightGray
-                , E.spacer (round w) h `E.beside` E.color Color.blue (E.spacer h h)
+                , E.beside (E.spacer (round w) h) <| E.color Color.blue (E.spacer h h)
                 ]
 
         padding =
             E.spacer 1 20
     in
-        E.spacer 40 1
-            `E.beside`
-                E.flow
-                    E.down
-                    [ text "This is a demo of three different approaches to interrupted animation. Click the mouse rapidly."
-                    , padding
-                    , text "The first slider is very naive. When interrupted, it pretends the previous animation has already completed, and jumps to the other side only to return. Astoundingly, this is how CSS transitions still work."
-                    , slider w1
-                    , padding
-                    , text "This slider will undo the current animation, instantly reversing its direction."
-                    , slider w2
-                    , padding
-                    , text "This slider will smoothly decelerate and reverse."
-                    , slider w3
-                    , text "Notice that all sliders reach their destination at the same time. The first slider is discontinuous is position; the second slider is discontinuous in velocity; the third slider is smooth."
-                    ]
+        E.beside (E.spacer 40 1) <|
+            E.flow
+                E.down
+                [ text "This is a demo of three different approaches to interrupted animation. Click the mouse rapidly."
+                , padding
+                , text "The first slider is very naive. When interrupted, it pretends the previous animation has already completed, and jumps to the other side only to return. Astoundingly, this is how CSS transitions still work."
+                , slider w1
+                , padding
+                , text "This slider will undo the current animation, instantly reversing its direction."
+                , slider w2
+                , padding
+                , text "This slider will smoothly decelerate and reverse."
+                , slider w3
+                , text "Notice that all sliders reach their destination at the same time. The first slider is discontinuous is position; the second slider is discontinuous in velocity; the third slider is smooth."
+                ]
 
 
 main =

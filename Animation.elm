@@ -187,14 +187,14 @@ animate t (A { start, delay, dos, ramp, from, to, ease }) =
 
                 Just vel ->
                     let
-                        eased' =
+                        -- always use cosine ease for this
+                        eased_ =
                             defaultEase fr
 
-                        -- always use cosine ease for this
-                        from' =
+                        from_ =
                             vel * (t - start)
                     in
-                        from' - from' * eased'
+                        from_ - from_ * eased_
 
         -- TODO do we properly interpolate when the easing function isn't a sinusoid?
     in
