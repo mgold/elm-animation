@@ -78,8 +78,8 @@ import Time exposing (Time)
 
 
 type DurationOrSpeed
-  = Duration Time
-  | Speed Float
+    = Duration Time
+    | Speed Float
 
 
 
@@ -87,22 +87,22 @@ type DurationOrSpeed
 
 
 type alias AnimRecord =
-  { start : Time
-  , delay : Time
-  , dos : DurationOrSpeed
-  , ramp :
-      Maybe Float
-      -- used for interruptions
-  , ease : Float -> Float
-  , from : Float
-  , to : Float
-  }
+    { start : Time
+    , delay : Time
+    , dos : DurationOrSpeed
+    , ramp :
+        Maybe Float
+        -- used for interruptions
+    , ease : Float -> Float
+    , from : Float
+    , to : Float
+    }
 
 
 {-| An Animation is an opaque type that represents a time-varying number (floating point value).
 -}
 type Animation
-  = A AnimRecord
+    = A AnimRecord
 
 
 
@@ -111,12 +111,12 @@ type Animation
 
 dur : DurationOrSpeed -> Float -> Float -> Time
 dur dos from to =
-  case dos of
-    Duration t ->
-      t
+    case dos of
+        Duration t ->
+            t
 
-    Speed s ->
-      (abs (to - from)) / s
+        Speed s ->
+            (abs (to - from)) / s
 
 
 
@@ -125,12 +125,12 @@ dur dos from to =
 
 spd : DurationOrSpeed -> Float -> Float -> Float
 spd dos from to =
-  case dos of
-    Duration t ->
-      (abs (to - from)) / t
+    case dos of
+        Duration t ->
+            (abs (to - from)) / t
 
-    Speed s ->
-      s
+        Speed s ->
+            s
 
 
 
@@ -139,7 +139,7 @@ spd dos from to =
 
 defaultDuration : DurationOrSpeed
 defaultDuration =
-  Duration (750 * Time.millisecond)
+    Duration (750 * Time.millisecond)
 
 
 
@@ -148,7 +148,7 @@ defaultDuration =
 
 defaultEase : Float -> Float
 defaultEase x =
-  (1 - cos (pi * x)) / 2
+    (1 - cos (pi * x)) / 2
 
 
 {-| Create an animation that begins at the given time. By default, animations have no delay, last 750ms, and interpolate
@@ -156,49 +156,49 @@ between 0 and 1 with a sinusoidal easing function. All of these can be changed.
 -}
 animation : Time -> Animation
 animation t =
-  A <| AnimRecord t 0 defaultDuration Nothing defaultEase 0 1
+    A <| AnimRecord t 0 defaultDuration Nothing defaultEase 0 1
 
 
 {-| Create a static animation that is always the given value.
 -}
 static : Float -> Animation
 static x =
-  A <| AnimRecord 0 0 defaultDuration Nothing defaultEase x x
+    A <| AnimRecord 0 0 defaultDuration Nothing defaultEase x x
 
 
 {-| Produce the value of an animation at a given time.
 -}
 animate : Time -> Animation -> Float
 animate t (A { start, delay, dos, ramp, from, to, ease }) =
-  let
-    duration =
-      dur dos from to
+    let
+        duration =
+            dur dos from to
 
-    fr =
-      clamp 0 1 <| (t - start - delay) / duration
+        fr =
+            clamp 0 1 <| (t - start - delay) / duration
 
-    eased =
-      ease fr
+        eased =
+            ease fr
 
-    correction =
-      case ramp of
-        Nothing ->
-          0
+        correction =
+            case ramp of
+                Nothing ->
+                    0
 
-        Just vel ->
-          let
-            eased' =
-              defaultEase fr
+                Just vel ->
+                    let
+                        eased_ =
+                            defaultEase fr
 
-            -- always use cosine ease for this
-            from' =
-              vel * (t - start)
-          in
-            from' - from' * eased'
+                        -- always use cosine ease for this
+                        from_ =
+                            vel * (t - start)
+                    in
+                        from_ - from_ * eased_
 
-    -- TODO do we properly interpolate when the easing function isn't a sinusoid?
-  in
-    from + (to - from) * eased + correction
+        -- TODO do we properly interpolate when the easing function isn't a sinusoid?
+    in
+        from + (to - from) * eased + correction
 
 
 {-| Run an animation in reverse from its current state, beginning immediately (even if the animation was delayed or has
@@ -209,15 +209,15 @@ undone animation is frequently not what you want.
 -}
 undo : Time -> Animation -> Animation
 undo t ((A a) as u) =
-  A
-    { a
-      | from = a.to
-      , to = a.from
-      , start = t
-      , delay = -(timeRemaining t u)
-      , ramp = Nothing
-      , ease = (\t -> 1 - (a.ease (1 - t)))
-    }
+    A
+        { a
+            | from = a.to
+            , to = a.from
+            , start = t
+            , delay = -(timeRemaining t u)
+            , ramp = Nothing
+            , ease = (\t -> 1 - (a.ease (1 - t)))
+        }
 
 
 {-| Change the `to` value of a running animation, without an abrupt change in velocity. The easing function will be
@@ -231,33 +231,33 @@ are the same, the animation is unchanged.
 -}
 retarget : Time -> Float -> Animation -> Animation
 retarget t newTo ((A a) as u) =
-  if newTo == a.to then
-    u
-  else if isStatic u then
-    A { a | start = t, to = newTo, ramp = Nothing }
-  else if isScheduled t u then
-    A { a | to = newTo, ramp = Nothing }
-  else if isDone t u then
-    A { a | start = t, delay = 0, from = a.to, to = newTo, ramp = Nothing }
-  else
-    -- it's running
-    let
-      vel =
-        velocity t u
+    if newTo == a.to then
+        u
+    else if isStatic u then
+        A { a | start = t, to = newTo, ramp = Nothing }
+    else if isScheduled t u then
+        A { a | to = newTo, ramp = Nothing }
+    else if isDone t u then
+        A { a | start = t, delay = 0, from = a.to, to = newTo, ramp = Nothing }
+    else
+        -- it's running
+        let
+            vel =
+                velocity t u
 
-      pos =
-        animate t u
+            pos =
+                animate t u
 
-      newSpeed =
-        case a.dos of
-          Speed _ ->
-            a.dos
+            newSpeed =
+                case a.dos of
+                    Speed _ ->
+                        a.dos
 
-          -- avoid recreating this object
-          Duration _ ->
-            Speed (spd a.dos a.from a.to)
-    in
-      A <| AnimRecord t 0 newSpeed (Just vel) a.ease pos newTo
+                    -- avoid recreating this object
+                    Duration _ ->
+                        Speed (spd a.dos a.from a.to)
+        in
+            A <| AnimRecord t 0 newSpeed (Just vel) a.ease pos newTo
 
 
 {-| Set the duration of an animation to the time specified. Note that the `Time` argument is _not_ the current running
@@ -265,7 +265,7 @@ time but the duration to be set.
 -}
 duration : Time -> Animation -> Animation
 duration x (A a) =
-  A { a | dos = Duration x }
+    A { a | dos = Duration x }
 
 
 {-| Set the _average_ speed of an animation. Speed is the rate at which the animation progresses between the `from` and
@@ -274,7 +274,7 @@ the sign. It is safe to alter the `from` and `to` values after setting speed.
 -}
 speed : Float -> Animation -> Animation
 speed x (A a) =
-  A { a | dos = Speed (abs x) }
+    A { a | dos = Speed (abs x) }
 
 
 {-| Set the delay of an animation to the time specified. An animation will not start until after the delay. The default
@@ -282,7 +282,7 @@ delay is 0. Note that the `Time` argument is _not_ the current running time but 
 -}
 delay : Time -> Animation -> Animation
 delay x (A a) =
-  A { a | delay = x }
+    A { a | delay = x }
 
 
 {-| Set the easing function of an animation. It is expected that `f 0 == 0` and `f 1 == 1`. The default is a sinusoidal
@@ -290,14 +290,14 @@ in-out.
 -}
 ease : (Float -> Float) -> Animation -> Animation
 ease x (A a) =
-  A { a | ease = x }
+    A { a | ease = x }
 
 
 {-| Set the initial value of an animation. The default is 0.
 -}
 from : Float -> Animation -> Animation
 from x (A a) =
-  A { a | from = x, ramp = Nothing }
+    A { a | from = x, ramp = Nothing }
 
 
 {-| Set the final value of an animation. The default is 1.
@@ -306,7 +306,7 @@ For animations that are already running, use `retarget`.
 -}
 to : Float -> Animation -> Animation
 to x (A a) =
-  A { a | to = x, ramp = Nothing }
+    A { a | to = x, ramp = Nothing }
 
 
 {-| Get the time elapsed since the animation started playing (after the end of delay). Will be zero for animations that
@@ -314,7 +314,7 @@ are still scheduled, and is not bounded for animations that are already done.
 -}
 timeElapsed : Time -> Animation -> Time
 timeElapsed t (A { start, delay }) =
-  t - (start + delay) |> max 0
+    t - (start + delay) |> max 0
 
 
 {-| Get the time that the animation has yet to play (or be delayed) before becoming done. Will be zero for animations
@@ -322,11 +322,11 @@ that are already done.
 -}
 timeRemaining : Time -> Animation -> Time
 timeRemaining t (A { start, delay, dos, from, to }) =
-  let
-    duration =
-      dur dos from to
-  in
-    start + delay + duration - t |> max 0
+    let
+        duration =
+            dur dos from to
+    in
+        start + delay + duration - t |> max 0
 
 
 {-| Get the _current_ velocity of the animation, aproximated by looking 10ms forwards and backwards (the central
@@ -334,14 +334,14 @@ difference). The velocity may be negative.
 -}
 velocity : Time -> Animation -> Float
 velocity t u =
-  let
-    backDiff =
-      animate (t - 10) u
+    let
+        backDiff =
+            animate (t - 10) u
 
-    forwDiff =
-      animate (t + 10) u
-  in
-    (forwDiff - backDiff) / 20
+        forwDiff =
+            animate (t + 10) u
+    in
+        (forwDiff - backDiff) / 20
 
 
 {-| Get the start time of the animation, not accounting for delay. For animations created with `animate`, this is the
@@ -349,49 +349,49 @@ argument that was passed. For interrupted animations, this is when the interrupt
 -}
 getStart : Animation -> Time
 getStart (A a) =
-  a.start
+    a.start
 
 
 {-| Get the duration of the animation, not counting delay.
 -}
 getDuration : Animation -> Time
 getDuration (A { dos, from, to }) =
-  dur dos from to
+    dur dos from to
 
 
 {-| Get the average speed of the animation.
 -}
 getSpeed : Animation -> Float
 getSpeed (A { dos, from, to }) =
-  spd dos from to
+    spd dos from to
 
 
 {-| Get the delay of the animation.
 -}
 getDelay : Animation -> Time
 getDelay (A a) =
-  a.delay
+    a.delay
 
 
 {-| Get the easing function of the animation.
 -}
 getEase : Animation -> Float -> Float
 getEase (A a) =
-  a.ease
+    a.ease
 
 
 {-| Get the initial value of the animation.
 -}
 getFrom : Animation -> Float
 getFrom (A a) =
-  a.from
+    a.from
 
 
 {-| Get the final value of the animation.
 -}
 getTo : Animation -> Float
 getTo (A a) =
-  a.to
+    a.to
 
 
 {-| Equality on animations. Compared to `(==)` (which should not be used), this
@@ -411,18 +411,18 @@ usually not in practice).
 -}
 equals : Animation -> Animation -> Bool
 equals (A a) (A b) =
-  a.start
-    + a.delay
-    == b.start
-    + b.delay
-    && a.from
-    == b.from
-    && a.to
-    == b.to
-    && a.ramp
-    == b.ramp
-    && (a.dos == b.dos || 0.001 >= abs (dur a.dos a.from a.to - dur b.dos b.from b.to))
-    && List.all (\t -> a.ease t == b.ease t) [ 0.1, 0.3, 0.7, 0.9 ]
+    a.start
+        + a.delay
+        == b.start
+        + b.delay
+        && a.from
+        == b.from
+        && a.to
+        == b.to
+        && a.ramp
+        == b.ramp
+        && (a.dos == b.dos || 0.001 >= abs (dur a.dos a.from a.to - dur b.dos b.from b.to))
+        && List.all (\t -> a.ease t == b.ease t) [ 0.1, 0.3, 0.7, 0.9 ]
 
 
 
@@ -431,25 +431,25 @@ equals (A a) (A b) =
 
 isStatic : Animation -> Bool
 isStatic (A { from, to }) =
-  from == to
+    from == to
 
 
 {-| Determine if an animation is scheduled, meaning that it has not yet changed value.
 -}
 isScheduled : Time -> Animation -> Bool
 isScheduled t ((A { start, delay }) as u) =
-  t <= start + delay && not (isStatic u)
+    t <= start + delay && not (isStatic u)
 
 
 {-| Determine if an animation is running, meaning that it is currently changing value.
 -}
 isRunning : Time -> Animation -> Bool
 isRunning t ((A { start, delay, dos, from, to }) as u) =
-  let
-    duration =
-      dur dos from to
-  in
-    t > start + delay && t < start + delay + duration && not (isStatic u)
+    let
+        duration =
+            dur dos from to
+    in
+        t > start + delay && t < start + delay + duration && not (isStatic u)
 
 
 {-| Determine if an animation is done, meaning that it has arrived at its final value. Static animations are always
@@ -457,8 +457,8 @@ done.
 -}
 isDone : Time -> Animation -> Bool
 isDone t ((A { start, delay, dos, from, to }) as u) =
-  let
-    duration =
-      dur dos from to
-  in
-    isStatic u || t >= start + delay + duration
+    let
+        duration =
+            dur dos from to
+    in
+        isStatic u || t >= start + delay + duration
