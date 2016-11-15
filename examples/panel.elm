@@ -188,14 +188,15 @@ render clock =
 scene : Model -> Element
 scene { arisClock, newtClock } =
     padding
-        `E.beside` E.flow E.down
-                    [ padding
-                    , render arisClock
-                    , E.spacer 1 <| round <| getTo height - animate arisClock height
-                      -- keep top of second panel fixed
-                    , padding
-                    , render newtClock
-                    ]
+        `E.beside`
+            E.flow E.down
+                [ padding
+                , render arisClock
+                , E.spacer 1 <| round <| getTo height - animate arisClock height
+                  -- keep top of second panel fixed
+                , padding
+                , render newtClock
+                ]
 
 
 main =

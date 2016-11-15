@@ -44,244 +44,244 @@ import Animation exposing (..)
 
 
 type alias Pos =
-  { x : Float, y : Float }
+    { x : Float, y : Float }
 
 
 type alias Model =
-  { clock : Time
-  , x : Animation
-  , y : Animation
-  , w : Int
-  , h : Int
-  , trail : List Pos
-  , clicks : List Pos
-  , lastClickTime : Time
-  , slow : Bool
-  , smear : Bool
-  }
+    { clock : Time
+    , x : Animation
+    , y : Animation
+    , w : Int
+    , h : Int
+    , trail : List Pos
+    , clicks : List Pos
+    , lastClickTime : Time
+    , slow : Bool
+    , smear : Bool
+    }
 
 
 dur =
-  750
+    750
 
 
 model0 : Model
 model0 =
-  Model 0 (static 0) (static 0) 0 0 [] [] 0 False False
+    Model 0 (static 0) (static 0) 0 0 [] [] 0 False False
 
 
 type Msg
-  = Tick Time
-  | Resize Window.Size
-  | Click Mouse.Position
-  | Reset
-  | NoOp
-  | Slow Bool
-  | Smear Bool
+    = Tick Time
+    | Resize Window.Size
+    | Click Mouse.Position
+    | Reset
+    | NoOp
+    | Slow Bool
+    | Smear Bool
 
 
 keycode =
-  { enter = 13, shift = 16, space = 32 }
+    { enter = 13, shift = 16, space = 32 }
 
 
 subs : Sub Msg
 subs =
-  Sub.batch
-    [ Keyboard.downs
-        (\code ->
-          if code == keycode.enter then
-            Reset
-          else if code == keycode.shift then
-            Slow True
-          else if code == keycode.space then
-            Smear True
-          else
-            Reset
-        )
-    , Keyboard.ups
-        (\code ->
-          if code == keycode.shift then
-            Slow False
-          else if code == keycode.space then
-            Smear False
-          else
-            Reset
-        )
-    , Mouse.clicks Click
-    , Window.resizes Resize
-    , AnimationFrame.diffs Tick
-    ]
+    Sub.batch
+        [ Keyboard.downs
+            (\code ->
+                if code == keycode.enter then
+                    Reset
+                else if code == keycode.shift then
+                    Slow True
+                else if code == keycode.space then
+                    Smear True
+                else
+                    Reset
+            )
+        , Keyboard.ups
+            (\code ->
+                if code == keycode.shift then
+                    Slow False
+                else if code == keycode.space then
+                    Smear False
+                else
+                    Reset
+            )
+        , Mouse.clicks Click
+        , Window.resizes Resize
+        , AnimationFrame.diffs Tick
+        ]
 
 
 update : Msg -> Model -> Model
 update action model =
-  case action of
-    Tick dt ->
-      updateTick dt model
+    case action of
+        Tick dt ->
+            updateTick dt model
 
-    Resize { width, height } ->
-      { model | w = width, h = height }
+        Resize { width, height } ->
+            { model | w = width, h = height }
 
-    Click rawPos ->
-      let
-        pos =
-          { x = toFloat rawPos.x - toFloat model.w / 2, y = toFloat model.h / 2 - toFloat rawPos.y }
-      in
-        { model
-          | clicks =
-              pos :: model.clicks
-              --                 sync durations, very important
-          , x = retarget model.clock pos.x model.x |> duration dur
-          , y = retarget model.clock pos.y model.y |> duration dur
-        }
+        Click rawPos ->
+            let
+                pos =
+                    { x = toFloat rawPos.x - toFloat model.w / 2, y = toFloat model.h / 2 - toFloat rawPos.y }
+            in
+                { model
+                    | clicks =
+                        pos :: model.clicks
+                        --                 sync durations, very important
+                    , x = retarget model.clock pos.x model.x |> duration dur
+                    , y = retarget model.clock pos.y model.y |> duration dur
+                }
 
-    Reset ->
-      { model
-        | clicks = List.head model.clicks |> Maybe.map (\c -> [ c ]) |> Maybe.withDefault []
-        , trail = []
-      }
+        Reset ->
+            { model
+                | clicks = List.head model.clicks |> Maybe.map (\c -> [ c ]) |> Maybe.withDefault []
+                , trail = []
+            }
 
-    Slow b ->
-      { model | slow = b }
+        Slow b ->
+            { model | slow = b }
 
-    Smear b ->
-      { model | smear = b }
+        Smear b ->
+            { model | smear = b }
 
-    NoOp ->
-      model
+        NoOp ->
+            model
 
 
 close a b =
-  abs (a - b) < 1
+    abs (a - b) < 1
 
 
 updateTick : Time -> Model -> Model
 updateTick dt model =
-  let
-    clock =
-      model.clock
-        + if model.slow then
-            dt / 5
-          else
-            dt
+    let
+        clock =
+            model.clock
+                + if model.slow then
+                    dt / 5
+                  else
+                    dt
 
-    pos =
-      { x = animate clock model.x, y = animate clock model.y }
+        pos =
+            { x = animate clock model.x, y = animate clock model.y }
 
-    trail_dt =
-      Time.millisecond * 30
+        trail_dt =
+            Time.millisecond * 30
 
-    recentlyClicked =
-      model.lastClickTime + trail_dt > clock
+        recentlyClicked =
+            model.lastClickTime + trail_dt > clock
 
-    lastClickTime =
-      if recentlyClicked then
-        model.lastClickTime
-      else
-        model.lastClickTime + trail_dt
+        lastClickTime =
+            if recentlyClicked then
+                model.lastClickTime
+            else
+                model.lastClickTime + trail_dt
 
-    trail =
-      case List.head model.trail of
-        Nothing ->
-          [ pos ]
+        trail =
+            case List.head model.trail of
+                Nothing ->
+                    [ pos ]
 
-        Just pos' ->
-          if close pos.x pos'.x && close pos.y pos'.y || recentlyClicked then
-            model.trail
-            -- find the position for the time of the dot rather than using the current one
-          else
-            { x = animate lastClickTime model.x, y = animate lastClickTime model.y } :: model.trail
-  in
-    { model | clock = clock, trail = trail, lastClickTime = lastClickTime }
+                Just pos' ->
+                    if close pos.x pos'.x && close pos.y pos'.y || recentlyClicked then
+                        model.trail
+                        -- find the position for the time of the dot rather than using the current one
+                    else
+                        { x = animate lastClickTime model.x, y = animate lastClickTime model.y } :: model.trail
+    in
+        { model | clock = clock, trail = trail, lastClickTime = lastClickTime }
 
 
 acceleration : Time -> Animation -> Float
 acceleration t a =
-  let
-    v0 =
-      velocity (t - 10) a
+    let
+        v0 =
+            velocity (t - 10) a
 
-    v1 =
-      velocity (t + 10) a
-  in
-    (v1 - v0) / 20
+        v1 =
+            velocity (t + 10) a
+    in
+        (v1 - v0) / 20
 
 
 render : Model -> Element
 render model =
-  C.collage model.w model.h
-    <| renderClicks model
-    ++ renderTrail model
-    ++ [ renderBall model ]
+    C.collage model.w model.h <|
+        renderClicks model
+            ++ renderTrail model
+            ++ [ renderBall model ]
 
 
 renderBall model =
-  let
-    oneBall =
-      renderBall' model.clock model.x model.y
-  in
-    if model.smear then
-      List.map (\t -> renderBall' (model.clock + t * 20) model.x model.y) [-5..5]
-        |> C.group
-        |> C.alpha 0.3
-        |> \gr -> C.group [ oneBall, gr ]
-    else
-      oneBall
+    let
+        oneBall =
+            renderBall' model.clock model.x model.y
+    in
+        if model.smear then
+            List.map (\t -> renderBall' (model.clock + t * 20) model.x model.y) [-5..5]
+                |> C.group
+                |> C.alpha 0.3
+                |> \gr -> C.group [ oneBall, gr ]
+        else
+            oneBall
 
 
 renderBall' clock x y =
-  let
-    pos =
-      ( animate clock x, animate clock y )
+    let
+        pos =
+            ( animate clock x, animate clock y )
 
-    vel =
-      ( 100 * velocity clock x, 100 * velocity clock y )
+        vel =
+            ( 100 * velocity clock x, 100 * velocity clock y )
 
-    acc =
-      ( 10000 * acceleration clock x, 10000 * acceleration clock y )
-  in
-    C.group
-      [ C.circle 20 |> C.filled Color.darkBlue
-      , C.segment ( 0, 0 ) vel |> thick Color.green
-      , C.segment ( 0, 0 ) acc |> thick Color.red
-      ]
-      |> C.move pos
+        acc =
+            ( 10000 * acceleration clock x, 10000 * acceleration clock y )
+    in
+        C.group
+            [ C.circle 20 |> C.filled Color.darkBlue
+            , C.segment ( 0, 0 ) vel |> thick Color.green
+            , C.segment ( 0, 0 ) acc |> thick Color.red
+            ]
+            |> C.move pos
 
 
 renderTrail { trail } =
-  List.map
-    (\{ x, y } -> C.circle 2 |> C.filled Color.lightOrange |> C.move ( x, y ))
-    trail
+    List.map
+        (\{ x, y } -> C.circle 2 |> C.filled Color.lightOrange |> C.move ( x, y ))
+        trail
 
 
 renderClicks { clicks } =
-  List.indexedMap
-    (\i { x, y } ->
-      C.square 12
-        |> C.filled
-            (if i == 0 then
-              Color.purple
-             else
-              Color.lightPurple
-            )
-        |> C.move ( x, y )
-    )
-    clicks
+    List.indexedMap
+        (\i { x, y } ->
+            C.square 12
+                |> C.filled
+                    (if i == 0 then
+                        Color.purple
+                     else
+                        Color.lightPurple
+                    )
+                |> C.move ( x, y )
+        )
+        clicks
 
 
 thick : Color -> C.Path -> Form
 thick c =
-  let
-    style =
-      C.solid c
-  in
-    C.traced { style | width = 2 }
+    let
+        style =
+            C.solid c
+    in
+        C.traced { style | width = 2 }
 
 
 main =
-  program
-    { init = ( model0, Task.perform (always NoOp) Resize Window.size )
-    , update = (\msg model -> ( update msg model, Cmd.none ))
-    , subscriptions = always subs
-    , view = render >> E.toHtml
-    }
+    program
+        { init = ( model0, Task.perform (always NoOp) Resize Window.size )
+        , update = (\msg model -> ( update msg model, Cmd.none ))
+        , subscriptions = always subs
+        , view = render >> E.toHtml
+        }
