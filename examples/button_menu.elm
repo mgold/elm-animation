@@ -12,7 +12,7 @@ import Time exposing (Time)
 import Task
 import Window
 import Mouse
-import Html.App exposing (program)
+import Html exposing (program)
 import AnimationFrame
 import Animation exposing (..)
 
@@ -72,7 +72,7 @@ model0 =
             animation -1000 |> from (degrees 45) |> to 0 |> duration 100
 
         rs =
-            List.map (\i -> theta |> from flyOutRad |> delayed i) [0..numChildren - 1]
+            List.map (\i -> theta |> from flyOutRad |> delayed i) (List.range 0 (numChildren - 1))
     in
         Model 0 0 theta rs 0 False
 
@@ -154,7 +154,7 @@ subs =
 
 main =
     program
-        { init = ( model0, Task.perform (always NoOp) Resize Window.size )
+        { init = ( model0, Task.perform Resize Window.size )
         , update = (\msg model -> ( update msg model, Cmd.none ))
         , subscriptions = always subs
         , view = scene >> Element.toHtml

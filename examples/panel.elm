@@ -17,7 +17,7 @@ import Task
 import Time exposing (Time, second)
 import Mouse
 import Window
-import Html.App exposing (program)
+import Html exposing (program)
 import AnimationFrame
 import Animation exposing (..)
 
@@ -142,7 +142,7 @@ lerp from to v =
     from + (to - from) * v
 
 
-lerp' from to v =
+lerp_ from to v =
     round (lerp (toFloat from) (toFloat to) v)
 
 
@@ -157,7 +157,7 @@ colorEase from to v =
         ( r2, g2, b2, a2 ) =
             ( rgb2.red, rgb2.green, rgb2.blue, rgb2.alpha )
     in
-        Color.rgba (lerp' r1 r2 v) (lerp' g1 g2 v) (lerp' b1 b2 v) (lerp a1 a2 v)
+        Color.rgba (lerp_ r1 r2 v) (lerp_ g1 g2 v) (lerp_ b1 b2 v) (lerp a1 a2 v)
 
 
 easeColor : Float -> Color
@@ -187,20 +187,21 @@ render clock =
 
 scene : Model -> Element
 scene { arisClock, newtClock } =
-    padding
-        `E.beside` E.flow E.down
-                    [ padding
-                    , render arisClock
-                    , E.spacer 1 <| round <| getTo height - animate arisClock height
-                      -- keep top of second panel fixed
-                    , padding
-                    , render newtClock
-                    ]
+    E.beside padding <|
+        E.flow
+            E.down
+            [ padding
+            , render arisClock
+            , E.spacer 1 <| round <| getTo height - animate arisClock height
+              -- keep top of second panel fixed
+            , padding
+            , render newtClock
+            ]
 
 
 main =
     program
-        { init = ( model0, Task.perform (always NoOp) Resize Window.size )
+        { init = ( model0, Task.perform Resize Window.size )
         , update = (\msg model -> ( update msg model, Cmd.none ))
         , subscriptions = always subs
         , view = scene >> E.toHtml
