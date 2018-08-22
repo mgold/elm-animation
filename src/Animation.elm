@@ -8,7 +8,7 @@ long, and even smoothly retarget a different destination midflight.
 The library encapsulates a 3-stage animation pipeline:
 
   - **Timekeeping:** Creating and running an animation requires the current time, which is best obtained with
-    [`AnimationFrame.times`](http://package.elm-lang.org/packages/elm-lang/animation-frame/latest/AnimationFrame#times).
+    [`Browser.Events.onAnimationFrame`](https://package.elm-lang.org/packages/elm/browser/latest/Browser-Events#onAnimationFrame).
     You can also specify the duration of animation, and delay it prior to starting.
 
   - **Easing:** An easing function makes an animation come alive with acceleration or even elasticity. You can find all
