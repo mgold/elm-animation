@@ -1,4 +1,33 @@
-module Animation exposing (Animation, TimeDelta, animate, animation, delay, duration, ease, equals, from, getDelay, getDuration, getEase, getFrom, getSpeed, getStart, getTo, isDone, isRunning, isScheduled, retarget, speed, static, timeElapsed, timeRemaining, to, undo, velocity)
+module Animation
+    exposing
+        ( Animation
+        , TimeDelta
+        , animate
+        , animation
+        , delay
+        , duration
+        , ease
+        , equals
+        , from
+        , getDelay
+        , getDuration
+        , getEase
+        , getFrom
+        , getSpeed
+        , getStart
+        , getTo
+        , getVelocity
+        , isDone
+        , isRunning
+        , isScheduled
+        , retarget
+        , speed
+        , static
+        , timeElapsed
+        , timeRemaining
+        , to
+        , undo
+        )
 
 {-| A library for animating between two `Float` values. For example, animate a panel's width from 100px to 300px over 2
 seconds, or make a button spin and grow on hover. Everything is a pure function (no signals or tasks), so you can use it
@@ -80,7 +109,7 @@ You may set an animation's duration or speed but not both, since one determines 
 
 ## Physics
 
-@docs timeElapsed, timeRemaining, velocity
+@docs timeElapsed, timeRemaining, getVelocity
 
 
 ## Settings
@@ -101,25 +130,30 @@ posixToMillis =
     Time.posixToMillis >> toFloat
 
 
-{-| A type alias for the difference between two `POSIX` times.
+{-| A type alias for the difference between two `Posix` times.
+
+Animators have to keep track of different sorts of numbers.
+
+  - `Posix` refers to a point in time, identified by duration since an epoch. This usually comes directly from the
+    animation frame. Animations start and end at `Posix` times.
+  - `TimeDelta` refers to the difference between two `Posix` times, such as a duration or a delay.
+  - A plain `Float` almost always means the value being animated, although it can also refer to the speed at which that
+    value changes.
+
 -}
 type alias TimeDelta =
     Float
 
 
-
--- private
-
-
+{-| private
+-}
 type DurationOrSpeed
     = Duration TimeDelta
     | Speed Float
 
 
-
--- private
-
-
+{-| private
+-}
 type alias AnimRecord =
     { start : Posix
     , delay_ : TimeDelta
@@ -137,10 +171,8 @@ type Animation
     = A AnimRecord
 
 
-
--- private
-
-
+{-| private
+-}
 dur : DurationOrSpeed -> Float -> Float -> TimeDelta
 dur dos from_ to_ =
     case dos of
@@ -151,10 +183,8 @@ dur dos from_ to_ =
             abs (to_ - from_) / s
 
 
-
--- private
-
-
+{-| private
+-}
 spd : DurationOrSpeed -> Float -> Float -> Float
 spd dos from_ to_ =
     case dos of
@@ -281,7 +311,7 @@ retarget t newTo ((A a) as u) =
         -- it's running
         let
             vel =
-                velocity t u
+                getVelocity t u
 
             pos =
                 animate t u
@@ -370,8 +400,8 @@ timeRemaining t (A { start, delay_, dos, from_, to_ }) =
 {-| Get the _current_ velocity of the animation, aproximated by looking 10ms forwards and backwards (the central
 difference). The velocity may be negative.
 -}
-velocity : Posix -> Animation -> Float
-velocity p u =
+getVelocity : Posix -> Animation -> Float
+getVelocity p u =
     let
         t =
             Time.posixToMillis p
@@ -467,10 +497,8 @@ equals (A a) (A b) =
         && List.all (\t -> a.ease_ t == b.ease_ t) [ 0.1, 0.3, 0.7, 0.9 ]
 
 
-
--- private, currently. Any value in exporting?
-
-
+{-| private , currently. Any value in exporting?
+-}
 isStatic : Animation -> Bool
 isStatic (A { from_, to_ }) =
     from_ == to_
