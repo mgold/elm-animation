@@ -1,6 +1,7 @@
 module Animation
     exposing
         ( Animation
+        , Clock
         , TimeDelta
         , animate
         , animation
@@ -36,8 +37,8 @@ long, and even smoothly retarget a different destination midflight.
 
 The library encapsulates a 3-stage animation pipeline:
 
-  - **Timekeeping:** Creating and running an animation requires the current time, which is best obtained with
-    [`Browser.Events.onAnimationFrame`](https://package.elm-lang.org/packages/elm/browser/latest/Browser-Events#onAnimationFrame).
+  - **Timekeeping:** Creating and running an animation requires the current time, which is best obtained by summing
+    [`Browser.Events.onAnimationFrameDelta`](https://package.elm-lang.org/packages/elm/browser/latest/Browser-Events#onAnimationFrameDelta).
     You can also specify the duration of animation, and delay it prior to starting.
 
   - **Easing:** An easing function makes an animation come alive with acceleration or even elasticity. You can find all
@@ -74,9 +75,26 @@ create animations of constant value. By using these two degenerate cases, you ou
 your model without worrying about when they aren't actually animating.
 
 
+# Types
+
+Animators have to keep track of different sorts of numbers. All of these are `Float`s under the hood, so they exist to
+clarify documentation. Be warned that the compiler won't help you keep them straight.
+
+  - `Clock` refers to a point in time, identified by duration since an epoch. For our purposes, the epoch is typically page load. (Why not use the UNIX epoch? Sometimes we have to take the sine of the clock and that's expensive for large numbers.) You are responsible for maintaining the clock and passing it in as necessary, most notably to run and create animations.
+
+  - `TimeDelta` refers to the difference between two `Clock` times, such as a duration or a delay.
+
+  - `Value` refers to the value being animated. It's used to indicate the output of the animation, as well as the initial
+    `from` and final `to` values.
+
+  - A plain `Float` refers to the speed at which the `Value` changes.
+
+@docs TimeDelta, Clock, Animation
+
+
 # Create
 
-@docs TimeDelta, animation, static
+@docs animation, static
 
 
 # Run
@@ -121,32 +139,26 @@ You may set an animation's duration or speed but not both, since one determines 
 
 @docs getStart, getDuration, getSpeed, getDelay, getEase, getFrom, getTo
 
-
-# The Animation Type
-
-@docs Animation
-
 -}
 
 import Time exposing (Posix)
 
 
-posixToMillis =
-    Time.posixToMillis >> toFloat
+{-| A type alias for amount of time (milliseconds) passed since page load.
+-}
+type alias Clock =
+    Float
 
 
-{-| A type alias for the difference between two `Posix` times.
-
-Animators have to keep track of different sorts of numbers.
-
-  - `Posix` refers to a point in time, identified by duration since an epoch. This usually comes directly from the
-    animation frame. Animations start and end at `Posix` times.
-  - `TimeDelta` refers to the difference between two `Posix` times, such as a duration or a delay.
-  - A plain `Float` almost always means the value being animated, although it can also refer to the speed at which that
-    value changes.
-
+{-| A type alias for the difference between two `Clock` times.
 -}
 type alias TimeDelta =
+    Float
+
+
+{-| A type alias for the value being animated.
+-}
+type alias Value =
     Float
 
 
@@ -160,13 +172,13 @@ type DurationOrSpeed
 {-| private
 -}
 type alias AnimRecord =
-    { start : Posix
+    { start : Clock
     , delay_ : TimeDelta
     , dos : DurationOrSpeed
     , ramp : Maybe Float -- used for interruptions
     , ease_ : Float -> Float
-    , from_ : Float
-    , to_ : Float
+    , from_ : Value
+    , to_ : Value
     }
 
 
@@ -178,7 +190,7 @@ type Animation
 
 {-| private
 -}
-dur : DurationOrSpeed -> Float -> Float -> TimeDelta
+dur : DurationOrSpeed -> Value -> Value -> TimeDelta
 dur dos from_ to_ =
     case dos of
         Duration t ->
@@ -190,7 +202,7 @@ dur dos from_ to_ =
 
 {-| private
 -}
-spd : DurationOrSpeed -> Float -> Float -> Float
+spd : DurationOrSpeed -> Value -> Value -> Float
 spd dos from_ to_ =
     case dos of
         Duration t ->
@@ -221,28 +233,28 @@ defaultEase x =
 {-| Create an animation that begins at the given time. By default, animations have no delay, last 750ms, and interpolate
 between 0 and 1 with a sinusoidal easing function. All of these can be changed.
 -}
-animation : Posix -> Animation
+animation : Clock -> Animation
 animation t =
     A <| AnimRecord t 0 defaultDuration Nothing defaultEase 0 1
 
 
 {-| Create a static animation that is always the given value.
 -}
-static : Float -> Animation
+static : Value -> Animation
 static x =
-    A <| AnimRecord (Time.millisToPosix 0) 0 defaultDuration Nothing defaultEase x x
+    A <| AnimRecord 0 0 defaultDuration Nothing defaultEase x x
 
 
 {-| Produce the value of an animation at a given time.
 -}
-animate : Posix -> Animation -> Float
-animate t (A { start, delay_, dos, ramp, from_, to_, ease_ }) =
+animate : Clock -> Animation -> Value
+animate clock (A { start, delay_, dos, ramp, from_, to_, ease_ }) =
     let
         duration_ =
             dur dos from_ to_
 
         fr =
-            clamp 0 1 <| (posixToMillis t - posixToMillis start - delay_) / duration_
+            clamp 0 1 <| (clock - start - delay_) / duration_
 
         eased =
             ease_ fr
@@ -259,7 +271,7 @@ animate t (A { start, delay_, dos, ramp, from_, to_, ease_ }) =
                             defaultEase fr
 
                         from__ =
-                            vel * (posixToMillis t - posixToMillis start)
+                            vel * (clock - start)
                     in
                     from__ - from__ * eased_
 
@@ -275,16 +287,16 @@ Usually you don't want to undo an animation that has been retargeted; just retar
 undone animation is frequently not what you want.
 
 -}
-undo : Posix -> Animation -> Animation
-undo t ((A a) as u) =
+undo : Clock -> Animation -> Animation
+undo clock ((A a) as u) =
     A
         { a
             | from_ = a.to_
             , to_ = a.from_
-            , start = t
-            , delay_ = -(timeRemaining t u)
+            , start = clock
+            , delay_ = -(timeRemaining clock u)
             , ramp = Nothing
-            , ease_ = \t2 -> 1 - a.ease_ (1 - t2)
+            , ease_ = \clock2 -> 1 - a.ease_ (1 - clock2)
         }
 
 
@@ -298,39 +310,39 @@ old `to`, `to` and `start` are set to the values provided, and the delay is set 
 are the same, the animation is unchanged.
 
 -}
-retarget : Posix -> Float -> Animation -> Animation
-retarget t newTo ((A a) as u) =
+retarget : Clock -> Value -> Animation -> Animation
+retarget clock newTo ((A a) as u) =
     if newTo == a.to_ then
         u
 
     else if isStatic u then
-        A { a | start = t, to_ = newTo, ramp = Nothing }
+        A { a | start = clock, to_ = newTo, ramp = Nothing }
 
-    else if isScheduled t u then
+    else if isScheduled clock u then
         A { a | to_ = newTo, ramp = Nothing }
 
-    else if isDone t u then
-        A { a | start = t, delay_ = 0, from_ = a.to_, to_ = newTo, ramp = Nothing }
+    else if isDone clock u then
+        A { a | start = clock, delay_ = 0, from_ = a.to_, to_ = newTo, ramp = Nothing }
 
     else
         -- it's running
         let
             vel =
-                getVelocity t u
+                getVelocity clock u
 
             pos =
-                animate t u
+                animate clock u
 
             newSpeed =
                 case a.dos of
+                    -- avoid recreating this object
                     Speed _ ->
                         a.dos
 
-                    -- avoid recreating this object
                     Duration _ ->
                         Speed (spd a.dos a.from_ a.to_)
         in
-        A <| AnimRecord t 0 newSpeed (Just vel) a.ease_ pos newTo
+        A <| AnimRecord clock 0 newSpeed (Just vel) a.ease_ pos newTo
 
 
 {-| Set the duration of an animation to the time specified.
@@ -367,7 +379,7 @@ ease x (A a) =
 
 {-| Set the initial value of an animation. The default is 0.
 -}
-from : Float -> Animation -> Animation
+from : Value -> Animation -> Animation
 from x (A a) =
     A { a | from_ = x, ramp = Nothing }
 
@@ -377,7 +389,7 @@ from x (A a) =
 For animations that are already running, use `retarget`.
 
 -}
-to : Float -> Animation -> Animation
+to : Value -> Animation -> Animation
 to x (A a) =
     A { a | to_ = x, ramp = Nothing }
 
@@ -385,37 +397,34 @@ to x (A a) =
 {-| Get the time elapsed since the animation started playing (after the end of delay). Will be zero for animations that
 are still scheduled, and is not bounded for animations that are already done.
 -}
-timeElapsed : Posix -> Animation -> TimeDelta
-timeElapsed t (A { start, delay_ }) =
-    posixToMillis t - (posixToMillis start + delay_) |> max 0
+timeElapsed : Clock -> Animation -> TimeDelta
+timeElapsed clock (A { start, delay_ }) =
+    clock - (start + delay_) |> max 0
 
 
 {-| Get the time that the animation has yet to play (or be delayed) before becoming done. Will be zero for animations
 that are already done.
 -}
-timeRemaining : Posix -> Animation -> TimeDelta
-timeRemaining t (A { start, delay_, dos, from_, to_ }) =
+timeRemaining : Clock -> Animation -> TimeDelta
+timeRemaining clock (A { start, delay_, dos, from_, to_ }) =
     let
         duration_ =
             dur dos from_ to_
     in
-    posixToMillis start + delay_ + duration_ - posixToMillis t |> max 0
+    start + delay_ + duration_ - clock |> max 0
 
 
 {-| Get the _current_ velocity of the animation, aproximated by looking 10ms forwards and backwards (the central
 difference). The velocity may be negative.
 -}
-getVelocity : Posix -> Animation -> Float
-getVelocity p u =
+getVelocity : Clock -> Animation -> Float
+getVelocity clock u =
     let
-        t =
-            Time.posixToMillis p
-
         backDiff =
-            animate (Time.millisToPosix <| t - 10) u
+            animate (clock - 10) u
 
         forwDiff =
-            animate (Time.millisToPosix <| t + 10) u
+            animate (clock + 10) u
     in
     (forwDiff - backDiff) / 20
 
@@ -423,7 +432,7 @@ getVelocity p u =
 {-| Get the start time of the animation, not accounting for delay. For animations created with `animate`, this is the
 argument that was passed. For interrupted animations, this is when the interruption occured.
 -}
-getStart : Animation -> Posix
+getStart : Animation -> Clock
 getStart (A a) =
     a.start
 
@@ -458,14 +467,14 @@ getEase (A a) =
 
 {-| Get the initial value of the animation.
 -}
-getFrom : Animation -> Float
+getFrom : Animation -> Value
 getFrom (A a) =
     a.from_
 
 
 {-| Get the final value of the animation.
 -}
-getTo : Animation -> Float
+getTo : Animation -> Value
 getTo (A a) =
     a.to_
 
@@ -475,22 +484,20 @@ function handles the conversion of speed and duration, and start and delay. It
 also samples the easing functions, which may produce false positives (but
 usually not in practice).
 
-    -- These are True
-    animation 0 `equals` animation 0
-    (animation 0 |> delay 10) `equals` animation 10
-    (animation 0 |> duration 1000) `equals` (animation 0 |> speed 0.001)
+    equals (animation 0) (animation 0) --> True
+    equals (animation 0 |> delay 10) (animation 10) --> True
+    equals (animation 0 |> duration 1000) (animation 0 |> speed 0.001) --> True
 
-    -- These are False
-    static 0 `equals` animation 0
-    (animation 0 |> from -1) `equals` animation 0
-    (animation 0 |> ease identity) `equals` animation 0
+    equals (static 0) (animation 0) --> False
+    equals (animation 0 |> from -1) (animation 0) --> False
+    equals (animation 0 |> ease identity) (animation 0) --> False
 
 -}
 equals : Animation -> Animation -> Bool
 equals (A a) (A b) =
-    posixToMillis a.start
+    a.start
         + a.delay_
-        == posixToMillis b.start
+        == b.start
         + b.delay_
         && a.from_
         == b.from_
@@ -511,35 +518,34 @@ isStatic (A { from_, to_ }) =
 
 {-| Determine if an animation is scheduled, meaning that it has not yet changed value.
 -}
-isScheduled : Posix -> Animation -> Bool
-isScheduled t ((A { start, delay_ }) as u) =
-    posixToMillis t <= posixToMillis start + delay_ && not (isStatic u)
+isScheduled : Clock -> Animation -> Bool
+isScheduled clock ((A { start, delay_ }) as u) =
+    clock <= start + delay_ && not (isStatic u)
 
 
 {-| Determine if an animation is running, meaning that it is currently changing value.
+
+Static animations are never running.
+
 -}
-isRunning : Posix -> Animation -> Bool
-isRunning p ((A { start, delay_, dos, from_, to_ }) as u) =
-    let
-        duration_ =
-            dur dos from_ to_
-
-        t =
-            posixToMillis p
-
-        start_ =
-            posixToMillis start
-    in
-    t > start_ + delay_ && t < start_ + delay_ + duration_ && not (isStatic u)
-
-
-{-| Determine if an animation is done, meaning that it has arrived at its final value. Static animations are always
-done.
--}
-isDone : Posix -> Animation -> Bool
-isDone t ((A { start, delay_, dos, from_, to_ }) as u) =
+isRunning : Clock -> Animation -> Bool
+isRunning clock ((A { start, delay_, dos, from_, to_ }) as u) =
     let
         duration_ =
             dur dos from_ to_
     in
-    isStatic u || posixToMillis t >= posixToMillis start + delay_ + duration_
+    clock > start + delay_ && clock < start + delay_ + duration_ && not (isStatic u)
+
+
+{-| Determine if an animation is done, meaning that it has arrived at its final value.
+
+Static animations are always done.
+
+-}
+isDone : Clock -> Animation -> Bool
+isDone clock ((A { start, delay_, dos, from_, to_ }) as u) =
+    let
+        duration_ =
+            dur dos from_ to_
+    in
+    isStatic u || clock >= start + delay_ + duration_
