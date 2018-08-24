@@ -27,10 +27,15 @@ rendering): they are scheduled, they run, and then they are done.
 
 ````elm
 import Animation exposing (..)
-import Time exposing (second)
+import Time
 
-myAnim = animation 0 |> from 100 |> to 300 |> duration (4*second) |> delay (1*second)
-List.map (\t -> animate (t*second) myAnim) [0..6]
+myAnim = animation (Time.millisToPosix 0)
+  |> from 100
+  |> to 300
+  |> duration 4
+  |> delay 1
+
+List.map (\t -> animate (Time.millisToPosix t) myAnim) (List.range 0 6)
 -- [100, 100, 129.29, 200, 270.71, 300, 300]
 ````
 
