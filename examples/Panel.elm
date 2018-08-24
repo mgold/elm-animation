@@ -1,25 +1,28 @@
-{- In this example, rather than steadily counting time and replacing animations, we rock time back and forth and
-   maintain the same animations. A naive implementation, shown as the top panel, reverses direction immediately, rather
-   than slowing down first. A more advanced implementation animates time itself: rather than always adding or
-   subtracting the timestep, it interpolates between a factor or -1 and 1. (It only does this if the animation is
-   interrupted; if it is restarted after completing it works identitcally to the naive version, to avoid lag at the
-   start.)
+module Panel exposing (main)
 
-   Click the mouse to trigger the animation. If you cick rapidly, the second panel looks a lot better.
+{- In this example, rather than steadily counting time and replacing
+   animations, we rock time back and forth and maintain the same animations.
+   A naive implementation, shown as the top panel, reverses direction
+   immediately, rather than slowing down first. A more advanced implementation
+   animates time itself: rather than always adding or subtracting the
+   timestep, it interpolates between a factor or -1 and 1.
+   (It only does this if the animation is interrupted; if it is restarted
+   after completing it works identitcally to the naive version,
+   to avoid lag at the start.)
+
+   Click the mouse to trigger the animation. If you cick rapidly,
+   the second panel looks a lot better.
 -}
 
-
-module Main exposing (..)
-
+import Animation exposing (..)
+import AnimationFrame
 import Color exposing (Color)
 import Element as E exposing (Element)
+import Html exposing (program)
+import Mouse
 import Task
 import Time exposing (Time, second)
-import Mouse
 import Window
-import Html exposing (program)
-import AnimationFrame
-import Animation exposing (..)
 
 
 width =
@@ -38,7 +41,8 @@ type alias Model =
     { trueClock : Time
     , arisClock :
         Time
-        -- Aristotelian and Newtonian clocks
+
+    -- Aristotelian and Newtonian clocks
     , newtClock : Time
     , forward : Bool
     , newtFactor : Animation
@@ -88,21 +92,24 @@ update action model =
                 newTrueClock =
                     model.trueClock + dt
             in
-                { model
-                    | trueClock = newTrueClock
-                    , arisClock =
-                        model.arisClock
-                            + dt
-                            * (if model.forward then
-                                1
-                               else
-                                -1
-                              )
-                        -- always 1 or -1
-                    , newtClock =
-                        model.newtClock + dt * (animate newTrueClock model.newtFactor)
-                        -- often between 1 or -1
-                }
+            { model
+                | trueClock = newTrueClock
+                , arisClock =
+                    model.arisClock
+                        + dt
+                        * (if model.forward then
+                            1
+
+                           else
+                            -1
+                          )
+
+                -- always 1 or -1
+                , newtClock =
+                    model.newtClock + dt * animate newTrueClock model.newtFactor
+
+                -- often between 1 or -1
+            }
 
         Click ->
             if model.forward then
@@ -114,23 +121,29 @@ update action model =
                             -- skip tweening if restarting animation from rest
                         then
                             static -1
+
                         else
                             animateRev |> delay model.trueClock
                     , arisClock =
                         min model.arisClock second
-                        -- reset clocks that have gotten really big
+
+                    -- reset clocks that have gotten really big
                     , newtClock =
                         min model.newtClock second
-                        -- but keep them if we're still animating
+
+                    -- but keep them if we're still animating
                 }
+
             else
                 { model
                     | forward =
                         True
-                        -- works exactly opposite the other case
+
+                    -- works exactly opposite the other case
                     , newtFactor =
                         if model.newtClock < 0 then
                             static 1
+
                         else
                             animateFwd |> delay model.trueClock
                     , arisClock = max model.arisClock 0
@@ -157,7 +170,7 @@ colorEase from to v =
         ( r2, g2, b2, a2 ) =
             ( rgb2.red, rgb2.green, rgb2.blue, rgb2.alpha )
     in
-        Color.rgba (lerp_ r1 r2 v) (lerp_ g1 g2 v) (lerp_ b1 b2 v) (lerp a1 a2 v)
+    Color.rgba (lerp_ r1 r2 v) (lerp_ g1 g2 v) (lerp_ b1 b2 v) (lerp a1 a2 v)
 
 
 easeColor : Float -> Color
@@ -182,7 +195,7 @@ render clock =
         clr =
             animate clock color |> easeColor
     in
-        E.spacer wid hei |> E.color clr
+    E.spacer wid hei |> E.color clr
 
 
 scene : Model -> Element
@@ -193,7 +206,8 @@ scene { arisClock, newtClock } =
             [ padding
             , render arisClock
             , E.spacer 1 <| round <| getTo height - animate arisClock height
-              -- keep top of second panel fixed
+
+            -- keep top of second panel fixed
             , padding
             , render newtClock
             ]
@@ -202,7 +216,7 @@ scene { arisClock, newtClock } =
 main =
     program
         { init = ( model0, Task.perform Resize Window.size )
-        , update = (\msg model -> ( update msg model, Cmd.none ))
+        , update = \msg model -> ( update msg model, Cmd.none )
         , subscriptions = always subs
         , view = scene >> E.toHtml
         }

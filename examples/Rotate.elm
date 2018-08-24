@@ -1,18 +1,20 @@
-{- This example shows animating to an angle. The only slightly tricky bit is making sure you go the shortest way around. -}
+module Rotate exposing (main)
 
+{- This example shows animating to an angle.
+   The only slightly tricky bit is making sure
+   you go the shortest way around.
+-}
 
-module Main exposing (..)
-
-import Color
-import Collage
-import Element exposing (Element)
-import Time exposing (Time)
-import Task
-import Window
-import Mouse
-import Html exposing (program)
-import AnimationFrame
 import Animation exposing (..)
+import AnimationFrame
+import Collage
+import Color
+import Element exposing (Element)
+import Html exposing (program)
+import Mouse
+import Task
+import Time exposing (Time)
+import Window
 
 
 type alias Model =
@@ -50,7 +52,7 @@ update act model =
                 dur =
                     max (getDuration theta) (getDuration r)
             in
-                { model | theta = theta |> duration dur, r = r |> duration dur }
+            { model | theta = theta |> duration dur, r = r |> duration dur }
 
         Resize { width, height } ->
             { model | w = width, h = height }
@@ -67,12 +69,14 @@ normalizeAngle anim =
         to =
             getTo anim
     in
-        if abs (from - to) < (degrees 180) then
-            anim
-        else if to < from then
-            normalizeAngle <| Animation.to (to + turns 1) anim
-        else
-            normalizeAngle <| Animation.to (to - turns 1) anim
+    if abs (from - to) < degrees 180 then
+        anim
+
+    else if to < from then
+        normalizeAngle <| Animation.to (to + turns 1) anim
+
+    else
+        normalizeAngle <| Animation.to (to - turns 1) anim
 
 
 armLength =
@@ -100,7 +104,7 @@ scene { w, h, theta, r, clock } =
         group =
             Collage.group [ base, arm, circle ] |> Collage.rotate angle
     in
-        Collage.collage w h [ group ]
+    Collage.collage w h [ group ]
 
 
 subs : Sub Msg
@@ -115,7 +119,7 @@ subs =
 main =
     program
         { init = ( model0, Task.perform Resize Window.size )
-        , update = (\msg model -> ( update msg model, Cmd.none ))
+        , update = \msg model -> ( update msg model, Cmd.none )
         , subscriptions = always subs
         , view = scene >> Element.toHtml
         }

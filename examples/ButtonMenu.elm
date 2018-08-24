@@ -1,20 +1,21 @@
-module Main exposing (..)
+module ButtonMenu exposing (main)
 
-{-| Button menu example. Implements the essential visual form implemented withn React Motion here:
-https://medium.com/@nashvail/a-gentle-introduction-to-react-motion-dc50dd9f2459
-Uses half as many lines, but the devil is in the details, and this isn't a usable component itself.
+{- Button menu example. Implements the essential visual
+   form implemented with [React Motion here](https://medium.com/@nashvail/a-gentle-introduction-to-react-motion-dc50dd9f2459)
+   Uses half as many lines, but the devil is in the details,
+   and this isn’t a usable component itself.
 -}
 
-import Color exposing (lightGray, darkGray, lightBlue, white)
-import Collage
-import Element exposing (Element)
-import Time exposing (Time)
-import Task
-import Window
-import Mouse
-import Html exposing (program)
-import AnimationFrame
 import Animation exposing (..)
+import AnimationFrame
+import Collage
+import Color exposing (darkGray, lightBlue, lightGray, white)
+import Element exposing (Element)
+import Html exposing (program)
+import Mouse
+import Task
+import Time exposing (Time)
+import Window
 
 
 mainButtonRad =
@@ -74,7 +75,7 @@ model0 =
         rs =
             List.map (\i -> theta |> from flyOutRad |> delayed i) (List.range 0 (numChildren - 1))
     in
-        Model 0 0 theta rs 0 False
+    Model 0 0 theta rs 0 False
 
 
 update : Msg -> Model -> Model
@@ -91,14 +92,15 @@ update act model =
                 y =
                     toFloat model.h / 2 - toFloat rawPos.y
             in
-                if x ^ 2 + y ^ 2 < mainButtonRad ^ 2 then
-                    { model
-                        | open = not model.open
-                        , theta = undo model.clock model.theta
-                        , rs = List.indexedMap (\i -> undo model.clock >> delayed i) model.rs
-                    }
-                else
-                    model
+            if x ^ 2 + y ^ 2 < mainButtonRad ^ 2 then
+                { model
+                    | open = not model.open
+                    , theta = undo model.clock model.theta
+                    , rs = List.indexedMap (\i -> undo model.clock >> delayed i) model.rs
+                }
+
+            else
+                model
 
         Resize { width, height } ->
             { model | w = width, h = height }
@@ -140,7 +142,7 @@ scene { w, h, rs, theta, clock } =
         children =
             List.indexedMap (child stroked) rs ++ List.indexedMap (child filled) rs
     in
-        Collage.collage w h (bg :: children ++ [ group ])
+    Collage.collage w h (bg :: children ++ [ group ])
 
 
 subs : Sub Msg
@@ -155,7 +157,7 @@ subs =
 main =
     program
         { init = ( model0, Task.perform Resize Window.size )
-        , update = (\msg model -> ( update msg model, Cmd.none ))
+        , update = \msg model -> ( update msg model, Cmd.none )
         , subscriptions = always subs
         , view = scene >> Element.toHtml
         }

@@ -1,31 +1,36 @@
+module Seismogram exposing (main)
+
 {-
-   This demo shows the default behavior of retarget regarding the new speed/duration. An older version had bugs where
-   multiple retargets would cause the animation to overshoot by an arbitrary amount, and it would also become slow and
-   unresponsive. After contemplating what kind of complex algorithm could find the optimal duration, considering the
-   current velocity, direction of current vs. desired travel, timeRemaining, etc, I landed on the idea of retaining the old
-   speed. This is very simple, you just have to be sure to convert from duration if that's how it's specified, and works
-   remarkably well in terms of keeping the animation responsive, smooth, and not overshooting more than slightly.
+   This demo shows the default behavior of retarget regarding the new
+   speed/duration. An older version had bugs where multiple retargets
+   would cause the animation to overshoot by an arbitrary amount, and
+   it would also become slow and unresponsive. After contemplating
+   what kind of complex algorithm could find  the optimal duration,
+   considering the current velocity, direction of current vs. desired
+   travel, timeRemaining, etc, I landed on the idea of retaining the
+   old speed. This is very simple, you just have to be sure to convert
+   from duration if that’s how it's specified, and works remarkably
+   well in terms of keeping the animation responsive, smooth, and not
+   overshooting more than slightly.
 
-   However, if the new destination is very close to the current position, the animation is so short that it seems to stop
-   instantaneously. One could convert the average speed to a duration and provide a minimum, perhaps half a second. I tried
-   this and it didnt' behave naturally, and besides I don't like hard-coding a minimum time for a duration. Let the client
-   do that; I provide a sensible default.
-
+   However, if the new destination is very close to the current position,
+   the animation is so short that it seems to stop instantaneously. One
+   could convert the average speed to a duration and provide a minimum,
+   perhaps half a second. I tried this and it didn’t behave naturally,
+   and besides I don’t like hard-coding a minimum time for a duration.
+   Let the client do that; I provide a sensible default.
 -}
 
-
-module Main exposing (..)
-
-import Color
-import Collage
-import Element exposing (Element)
-import Time exposing (Time)
-import Task
-import Window
-import Mouse
-import Html exposing (program)
-import AnimationFrame
 import Animation exposing (..)
+import AnimationFrame
+import Collage
+import Color
+import Element exposing (Element)
+import Html exposing (program)
+import Mouse
+import Task
+import Time exposing (Time)
+import Window
 
 
 type alias Model =
@@ -50,7 +55,7 @@ subs =
         [ AnimationFrame.diffs Tick
         , Mouse.clicks Click
         , Window.resizes Resize
-        , (Time.every (0.5 * Time.second)) (always Cull)
+        , Time.every (0.5 * Time.second) (always Cull)
         ]
 
 
@@ -65,7 +70,7 @@ update act model =
                 pos =
                     animate clock model.x
             in
-                { model | dots = ( pos, clock ) :: model.dots, clock = clock }
+            { model | dots = ( pos, clock ) :: model.dots, clock = clock }
 
         Resize size ->
             { model | w = size.width, h = size.height }
@@ -75,7 +80,7 @@ update act model =
                 xPos =
                     toFloat x / toFloat model.w
             in
-                { model | x = retarget model.clock xPos model.x }
+            { model | x = retarget model.clock xPos model.x }
 
         Cull ->
             { model | dots = List.take 200 model.dots }
@@ -114,13 +119,13 @@ render model =
                 )
                 model.dots
     in
-        Collage.collage model.w model.h <| line :: dest :: circle :: dots
+    Collage.collage model.w model.h <| line :: dest :: circle :: dots
 
 
 main =
     program
         { init = ( model0, Task.perform Resize Window.size )
-        , update = (\msg model -> ( update msg model, Cmd.none ))
+        , update = \msg model -> ( update msg model, Cmd.none )
         , subscriptions = always subs
         , view = render >> Element.toHtml
         }

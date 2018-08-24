@@ -1,15 +1,16 @@
-module BarChart exposing (..)
+module BarChart exposing (main)
 
-{-| This module demonstrates bars that grow at a constant speed, even though they have different lengths.
+{- This module demonstrates bars that grow at a constant
+   speed, even though they have different lengths.
 -}
 
-import Color exposing (gray, red)
-import Element exposing (Element, flow, down, right, spacer, color)
-import Time exposing (Time)
-import Random
-import Html exposing (program)
-import AnimationFrame exposing (diffs)
 import Animation exposing (..)
+import AnimationFrame exposing (diffs)
+import Color exposing (gray, red)
+import Element exposing (Element, color, down, flow, right, spacer)
+import Html exposing (program)
+import Random
+import Time exposing (Time)
 
 
 data : List Int
@@ -21,7 +22,7 @@ data =
         seed =
             Random.initialSeed 42000
     in
-        Random.step gen seed |> Tuple.first
+    Random.step gen seed |> Tuple.first
 
 
 animations : List Animation
@@ -44,6 +45,7 @@ render1 x =
             , spacer
                 (if x == 0 then
                     0
+
                  else
                     1
                 )
@@ -58,7 +60,7 @@ render anims t =
     flow
         right
         [ spacer 40 1
-        , flow down <| List.map ((animate t) >> round >> render1) anims
+        , flow down <| List.map (animate t >> round >> render1) anims
         ]
 
 
@@ -70,6 +72,6 @@ main =
     program
         { init = ( 0, Cmd.none )
         , update = \dt t -> ( t + dt, Cmd.none )
-        , subscriptions = (\model -> diffs identity)
+        , subscriptions = \model -> diffs identity
         , view = renderClosure >> Element.toHtml
         }
