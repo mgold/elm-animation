@@ -9,10 +9,9 @@ import Animation exposing (..)
 import Browser
 import Browser.Dom exposing (getViewport)
 import Browser.Events exposing (onAnimationFrameDelta, onClick, onResize)
-import Collage
-import Color
-import Element exposing (Element)
 import Json.Decode as Decode exposing (Decoder, Value)
+import Svg exposing (Svg)
+import Svg.Attributes as SA
 import Task
 
 
@@ -47,7 +46,7 @@ update act model =
                 ( dest_r, dest_theta ) =
                     toPolar
                         ( toFloat mouseX - toFloat model.w / 2
-                        , toFloat model.h / 2 - toFloat mouseY
+                        , toFloat mouseY - toFloat model.h / 2
                         )
 
                 theta =
@@ -90,8 +89,8 @@ armLength =
     400
 
 
-scene : Model -> Element
-scene { w, h, theta, r, clock } =
+view : Model -> Svg Msg
+view { w, h, theta, r, clock } =
     let
         angle =
             animate clock theta
@@ -100,22 +99,48 @@ scene { w, h, theta, r, clock } =
             animate clock r
 
         base =
-            Collage.circle 5 |> Collage.filled Color.charcoal
+            Svg.circle [ SA.r "5", SA.fill "gray" ] []
 
         arm =
-            Collage.rect armLength 3 |> Collage.filled Color.charcoal |> Collage.moveX (armLength / 2)
+            Svg.line
+                [ SA.x2 (String.fromInt armLength)
+                , SA.strokeWidth "3"
+                , SA.stroke "gray"
+                ]
+                []
 
         circle =
-            Collage.circle 20 |> Collage.filled Color.red |> Collage.moveX radius
+            Svg.circle
+                [ SA.r "20"
+                , SA.fill "red"
+                , SA.cx (String.fromFloat radius)
+                ]
+                []
 
         group =
-            Collage.group [ base, arm, circle ] |> Collage.rotate angle
+            Svg.g
+                [ SA.transform
+                    ("translate("
+                        ++ String.fromInt (w // 2)
+                        ++ " "
+                        ++ String.fromInt (h // 2)
+                        ++ ") rotate("
+                        ++ String.fromFloat (angle / pi * 180)
+                        ++ ")"
+                    )
+                ]
+                [ base, arm, circle ]
     in
-    Collage.collage w h [ group ]
+    Svg.svg
+        [ SA.style "position:absolute;left:0;top:0"
+        , SA.width (String.fromInt w)
+        , SA.height (String.fromInt h)
+        ]
+        [ group ]
 
 
-subs : Sub Msg
-subs =
+subscriptions : Model -> Sub Msg
+subscriptions _ =
     Sub.batch
         [ onResize Resize
         , onAnimationFrameDelta Tick
@@ -143,6 +168,6 @@ main =
                     getViewport
                 )
         , update = \msg model -> ( update msg model, Cmd.none )
-        , subscriptions = always subs
-        , view = scene >> Element.toHtml
+        , subscriptions = subscriptions
+        , view = view
         }
