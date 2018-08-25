@@ -33,11 +33,10 @@ import Animation exposing (..)
 import Browser
 import Browser.Dom exposing (getViewport)
 import Browser.Events exposing (onAnimationFrameDelta, onClick, onKeyDown, onKeyUp, onResize)
-import Collage as C exposing (Form)
-import Color exposing (Color)
-import Element as E exposing (Element)
 import Html.Events exposing (keyCode)
-import Json.Decode as Decode exposing (Decoder, Values)
+import Json.Decode as Decode exposing (Decoder, Value)
+import Svg exposing (Svg)
+import Svg.Attributes as SA
 import Task
 
 
@@ -85,8 +84,8 @@ type Msg
     | Smear Bool
 
 
-subs : Sub Msg
-subs =
+subscriptions : Model -> Sub Msg
+subscriptions _ =
     Sub.batch
         [ onKeyDown (keyboardMsg True)
         , onKeyUp (keyboardMsg False)
@@ -134,8 +133,8 @@ update action model =
         Click mouseX mouseY ->
             let
                 pos =
-                    { x = toFloat mouseX - toFloat model.w / 2
-                    , y = toFloat model.h / 2 - toFloat mouseY
+                    { x = toFloat mouseX
+                    , y = toFloat mouseY
                     }
             in
             { model
@@ -215,22 +214,28 @@ acceleration : Float -> Animation -> Float
 acceleration t a =
     let
         v0 =
-            velocity (t - 10) a
+            getVelocity (t - 10) a
 
         v1 =
-            velocity (t + 10) a
+            getVelocity (t + 10) a
     in
     (v1 - v0) / 20
 
 
-render : Model -> Element
-render model =
-    C.collage model.w model.h <|
-        renderClicks model
-            ++ renderTrail model
+view : Model -> Svg Msg
+view model =
+    Svg.svg
+        [ SA.style "position:absolute;left:0;top:0"
+        , SA.width (String.fromInt model.w)
+        , SA.height (String.fromInt model.h)
+        ]
+        (List.indexedMap renderClick model.clicks
+            ++ List.map renderTrailItem model.trail
             ++ [ renderBall model ]
+        )
 
 
+renderBall : Model -> Svg Msg
 renderBall model =
     let
         oneBall =
@@ -238,62 +243,71 @@ renderBall model =
     in
     if model.smear then
         List.map (\t -> renderBall_ (model.clock + toFloat t * 20) model.x model.y) (List.range -5 5)
-            |> C.group
-            |> C.alpha 0.3
-            |> (\gr -> C.group [ oneBall, gr ])
+            |> Svg.g [ SA.style "opacity: 0.3" ]
+            |> (\gr -> Svg.g [] [ oneBall, gr ])
 
     else
         oneBall
 
 
+renderBall_ : Clock -> Animation -> Animation -> Svg Msg
 renderBall_ clock x y =
     let
-        pos =
+        ( posX, posY ) =
             ( animate clock x, animate clock y )
 
-        vel =
-            ( 100 * velocity clock x, 100 * velocity clock y )
+        ( velX, velY ) =
+            ( 100 * getVelocity clock x, 100 * getVelocity clock y )
 
-        acc =
+        ( accX, accY ) =
             ( 10000 * acceleration clock x, 10000 * acceleration clock y )
     in
-    C.group
-        [ C.circle 20 |> C.filled Color.darkBlue
-        , C.segment ( 0, 0 ) vel |> thick Color.green
-        , C.segment ( 0, 0 ) acc |> thick Color.red
+    Svg.g
+        [ SA.transform ("translate(" ++ String.fromFloat posX ++ " " ++ String.fromFloat posY ++ ")") ]
+        [ Svg.circle [ SA.r "20", SA.fill "lightblue" ] []
+        , Svg.line
+            [ SA.x2 (String.fromFloat velX)
+            , SA.y2 (String.fromFloat velY)
+            , SA.stroke "green"
+            , SA.strokeWidth "1"
+            ]
+            []
+        , Svg.line
+            [ SA.x2 (String.fromFloat accX)
+            , SA.y2 (String.fromFloat accY)
+            , SA.stroke "red"
+            , SA.strokeWidth "1"
+            ]
+            []
         ]
-        |> C.move pos
 
 
-renderTrail { trail } =
-    List.map
-        (\{ x, y } -> C.circle 2 |> C.filled Color.lightOrange |> C.move ( x, y ))
-        trail
+renderTrailItem : Pos -> Svg Msg
+renderTrailItem { x, y } =
+    Svg.circle
+        [ SA.r "2"
+        , SA.fill "orange"
+        , SA.cx (String.fromFloat x)
+        , SA.cy (String.fromFloat y)
+        ]
+        []
 
 
-renderClicks { clicks } =
-    List.indexedMap
-        (\i { x, y } ->
-            C.square 12
-                |> C.filled
-                    (if i == 0 then
-                        Color.purple
+renderClick : Int -> Pos -> Svg Msg
+renderClick i { x, y } =
+    Svg.rect
+        [ SA.width "12"
+        , SA.height "12"
+        , SA.x (String.fromFloat (x - 6))
+        , SA.y (String.fromFloat (y - 6))
+        , SA.fill <|
+            if i == 0 then
+                "purple"
 
-                     else
-                        Color.lightPurple
-                    )
-                |> C.move ( x, y )
-        )
-        clicks
-
-
-thick : Color -> C.Path -> Form
-thick c =
-    let
-        style =
-            C.solid c
-    in
-    C.traced { style | width = 2 }
+            else
+                "mediumpurple"
+        ]
+        []
 
 
 main : Program Value Model Msg
@@ -309,6 +323,6 @@ main =
                     getViewport
                 )
         , update = \msg model -> ( update msg model, Cmd.none )
-        , subscriptions = always subs
-        , view = render >> E.toHtml
+        , subscriptions = subscriptions
+        , view = view
         }
