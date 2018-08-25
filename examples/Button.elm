@@ -4,10 +4,9 @@ import Animation exposing (..)
 import Browser
 import Browser.Dom exposing (getViewport)
 import Browser.Events exposing (onAnimationFrameDelta, onClick, onMouseMove, onResize)
-import Collage
-import Color exposing (darkBlue, white)
-import Element exposing (Element)
 import Json.Decode as Decode exposing (Decoder, Value)
+import Svg exposing (Svg)
+import Svg.Attributes as SA
 import Task
 
 
@@ -72,7 +71,7 @@ big_r =
 
 update : Msg -> Model -> Model
 update act model =
-    -- this case analysis is ugly but I think it's intrinsic to the component
+    -- this case analysis is ugly but I think it’s intrinsic to the component
     case act of
         Tick t ->
             let
@@ -187,8 +186,8 @@ update act model =
             model
 
 
-scene : Model -> Element
-scene { w, h, r, theta, clock } =
+view : Model -> Svg Msg
+view { w, h, r, theta, clock } =
     let
         radius =
             animate clock r
@@ -196,21 +195,51 @@ scene { w, h, r, theta, clock } =
         angle =
             animate clock theta
 
+        ( centerX, centerY ) =
+            ( w // 2, h // 2 )
+
         rect =
-            Collage.rect (radius / 8) (radius / 1.25) |> Collage.filled white
+            Svg.rect
+                [ SA.width (String.fromFloat (radius / 8))
+                , SA.height (String.fromFloat (radius / 1.25))
+                , SA.fill "white"
+                , SA.x (String.fromFloat (-radius / 16))
+                , SA.y (String.fromFloat (-radius / 2.5))
+                ]
+                []
 
         circle =
-            Collage.circle radius |> Collage.filled darkBlue
-
-        group =
-            Collage.group [ circle, rect, rect |> Collage.rotate (degrees 90) ]
-                |> Collage.rotate angle
+            Svg.circle
+                [ SA.r (String.fromFloat radius)
+                , SA.fill "darkblue"
+                ]
+                []
     in
-    Collage.collage w h [ group ]
+    Svg.svg
+        [ SA.style "position:absolute;left:0;top:0"
+        , SA.width (String.fromInt w)
+        , SA.height (String.fromInt h)
+        ]
+        [ Svg.g
+            [ SA.transform
+                ("translate("
+                    ++ String.fromInt centerX
+                    ++ ","
+                    ++ String.fromInt centerY
+                    ++ ") rotate("
+                    ++ String.fromFloat (angle / pi * 180)
+                    ++ ")"
+                )
+            ]
+            [ circle
+            , rect
+            , Svg.g [ SA.transform "rotate(90)" ] [ rect ]
+            ]
+        ]
 
 
-subs : Sub Msg
-subs =
+subscriptions : Model -> Sub Msg
+subscriptions _ =
     Sub.batch
         [ onResize Resize
         , onAnimationFrameDelta Tick
@@ -239,6 +268,6 @@ main =
                     getViewport
                 )
         , update = \msg model -> ( update msg model, Cmd.none )
-        , subscriptions = always subs
-        , view = scene >> Element.toHtml
+        , subscriptions = subscriptions
+        , view = view
         }
