@@ -3,10 +3,11 @@ module Sliders exposing (main)
 import Animation exposing (..)
 import Browser
 import Browser.Events exposing (onAnimationFrameDelta, onClick)
-import Color
-import Element as E exposing (Element)
+import Html exposing (Html)
+import Html.Attributes as HA
 import Json.Decode as Decode exposing (Value)
-import Text
+import Svg exposing (Svg)
+import Svg.Attributes as SA
 
 
 type alias Model =
@@ -42,8 +43,8 @@ type Msg
     | Click
 
 
-subs : Sub Msg
-subs =
+subscriptions : Model -> Sub Msg
+subscriptions _ =
     Sub.batch
         [ onClick (Decode.succeed Click)
         , onAnimationFrameDelta Tick
@@ -86,8 +87,8 @@ update action model =
                 }
 
 
-render : Model -> Element
-render model =
+view : Model -> Svg Msg
+view model =
     let
         w1 =
             animate model.clock model.a1
@@ -102,32 +103,42 @@ render model =
             50
 
         text s =
-            Text.fromString s |> Text.color Color.charcoal |> E.leftAligned
+            Html.p
+                [ HA.style "color" "darkgray" ]
+                [ Html.text s ]
 
         slider w =
-            E.layers
-                [ E.spacer (slideLen + h) h |> E.color Color.lightGray
-                , E.beside (E.spacer (round w) h) <| E.color Color.blue (E.spacer h h)
+            Svg.svg
+                [ SA.style "display:block;"
+                , SA.width (String.fromInt (slideLen + h))
+                , SA.height (String.fromFloat h)
                 ]
-
-        padding =
-            E.spacer 1 20
+                [ Svg.rect
+                    [ SA.width (String.fromFloat (slideLen + h))
+                    , SA.height (String.fromFloat h)
+                    , SA.fill "lightgray"
+                    ]
+                    []
+                , Svg.rect
+                    [ SA.width (String.fromFloat h)
+                    , SA.height (String.fromFloat h)
+                    , SA.x (String.fromFloat w)
+                    , SA.fill "red"
+                    ]
+                    []
+                ]
     in
-    E.beside (E.spacer 40 1) <|
-        E.flow
-            E.down
-            [ text "This is a demo of three different approaches to interrupted animation. Click the mouse rapidly."
-            , padding
-            , text "The first slider is very naive. When interrupted, it pretends the previous animation has already completed, and jumps to the other side only to return. Astoundingly, this is how CSS transitions still work."
-            , slider w1
-            , padding
-            , text "This slider will undo the current animation, instantly reversing its direction."
-            , slider w2
-            , padding
-            , text "This slider will smoothly decelerate and reverse."
-            , slider w3
-            , text "Notice that all sliders reach their destination at the same time. The first slider is discontinuous is position; the second slider is discontinuous in velocity; the third slider is smooth."
-            ]
+    Html.div
+        [ HA.style "margin" "20px" ]
+        [ text "This is a demo of three different approaches to interrupted animation. Click the mouse rapidly."
+        , text "The first slider is very naive. When interrupted, it pretends the previous animation has already completed, and jumps to the other side only to return. Astoundingly, this is how CSS transitions still work."
+        , slider w1
+        , text "This slider will undo the current animation, instantly reversing its direction."
+        , slider w2
+        , text "This slider will smoothly decelerate and reverse."
+        , slider w3
+        , text "Notice that all sliders reach their destination at the same time. The first slider is discontinuous is position; the second slider is discontinuous in velocity; the third slider is smooth."
+        ]
 
 
 main : Program Value Model Msg
@@ -136,6 +147,6 @@ main =
         { init = always ( model0, Cmd.none )
         , update =
             \msg model -> ( update msg model, Cmd.none )
-        , subscriptions = always subs
-        , view = render >> E.toHtml
+        , subscriptions = subscriptions
+        , view = view
         }
