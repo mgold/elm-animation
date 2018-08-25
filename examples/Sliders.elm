@@ -1,11 +1,11 @@
 module Sliders exposing (main)
 
 import Animation exposing (..)
-import Browser.Events exposing (onAnimationFrameDelta)
+import Browser.Events exposing (onAnimationFrameDelta, onClick)
 import Color
 import Element as E exposing (Element)
 import Html exposing (program)
-import Mouse
+import Json.Decode as Decode
 import Text
 
 
@@ -45,7 +45,7 @@ type Msg
 subs : Sub Msg
 subs =
     Sub.batch
-        [ Mouse.clicks (always Click)
+        [ onClick (Decode.succeed Click)
         , onAnimationFrameDelta Tick
         ]
 

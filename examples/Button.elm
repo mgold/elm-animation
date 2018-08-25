@@ -2,19 +2,19 @@ module Button exposing (main)
 
 import Animation exposing (..)
 import Browser.Dom exposing (getViewport)
-import Browser.Events exposing (onAnimationFrameDelta, onResize)
+import Browser.Events exposing (onAnimationFrameDelta, onClick, onMouseMove, onResize)
 import Collage
 import Color exposing (darkBlue, white)
 import Element exposing (Element)
 import Html exposing (program)
-import Mouse
+import Json.Decode as Decode exposing (Decoder)
 import Task
 
 
 type Msg
     = Tick Float
-    | MouseMove Mouse.Position
-    | MouseClick Mouse.Position
+    | MouseMove Int Int
+    | MouseClick Int Int
     | Resize Int Int
     | NoOp
 
@@ -47,19 +47,19 @@ model0 =
     Model 0 0 (animation 0 |> from 0 |> to here_r) (static (degrees 45)) 0 Entering
 
 
-dist pos =
+dist posX posY =
     let
         x =
-            toFloat pos.x
+            toFloat posX
 
         y =
-            toFloat pos.y
+            toFloat posY
     in
     sqrt <| x * x + y * y
 
 
-collided pos { r, clock } =
-    animate clock r > dist pos
+collided x y { r, clock } =
+    animate clock r > dist x y
 
 
 here_r =
@@ -128,16 +128,19 @@ update act model =
             else
                 { model | clock = clock, state = state }
 
-        MouseMove rawPos ->
+        MouseMove mouseX mouseY ->
             let
-                pos =
-                    Mouse.Position (rawPos.x - model.w // 2) (model.h // 2 - rawPos.y)
+                posX =
+                    mouseX - model.w // 2
+
+                posY =
+                    model.h // 2 - mouseY
 
                 now =
                     model.clock
 
                 collision =
-                    collided pos model
+                    collided posX posY model
 
                 growingOrBig =
                     model.state == Growing || model.state == Big
@@ -159,12 +162,15 @@ update act model =
             else
                 model
 
-        MouseClick rawPos ->
+        MouseClick mouseX mouseY ->
             let
-                pos =
-                    Mouse.Position (rawPos.x - model.w // 2) (model.h // 2 - rawPos.y)
+                posX =
+                    mouseX - model.w // 2
+
+                posY =
+                    model.h // 2 - mouseY
             in
-            if collided pos model then
+            if collided posX posY model then
                 { model
                     | r = retarget model.clock 0 model.r |> duration 750
                     , theta = retarget model.clock (degrees 45) model.theta |> duration 750
@@ -208,9 +214,16 @@ subs =
     Sub.batch
         [ onResize Resize
         , onAnimationFrameDelta Tick
-        , Mouse.clicks MouseClick
-        , Mouse.moves MouseMove
+        , onClick (mousePosition MouseClick)
+        , onMouseMove (mousePosition MouseMove)
         ]
+
+
+mousePosition : (Int -> Int -> Msg) -> Decoder Msg
+mousePosition coordsToMsg =
+    Decode.map2 coordsToMsg
+        (Decode.field "pageX" Decode.int)
+        (Decode.field "pageY" Decode.int)
 
 
 main =

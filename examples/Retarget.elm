@@ -31,13 +31,13 @@ module Retarget exposing (main)
 
 import Animation exposing (..)
 import Browser.Dom exposing (getViewport)
-import Browser.Events exposing (onAnimationFrameDelta, onResize)
+import Browser.Events exposing (onAnimationFrameDelta, onClick, onResize)
 import Collage as C exposing (Form)
 import Color exposing (Color)
 import Element as E exposing (Element)
 import Html exposing (program)
+import Json.Decode as Decode exposing (Decoder)
 import Keyboard
-import Mouse
 import Task
 
 
@@ -78,7 +78,7 @@ model0 =
 type Msg
     = Tick Float
     | Resize Int Int
-    | Click Mouse.Position
+    | Click Int Int
     | Reset
     | NoOp
     | Slow Bool
@@ -117,10 +117,17 @@ subs =
                 else
                     Reset
             )
-        , Mouse.clicks Click
+        , onClick mousePosition
         , onResize Resize
         , onAnimationFrameDelta Tick
         ]
+
+
+mousePosition : Decoder Msg
+mousePosition =
+    Decode.map2 Click
+        (Decode.field "pageX" Decode.int)
+        (Decode.field "pageY" Decode.int)
 
 
 update : Msg -> Model -> Model
@@ -132,10 +139,12 @@ update action model =
         Resize width height ->
             { model | w = width, h = height }
 
-        Click rawPos ->
+        Click mouseX mouseY ->
             let
                 pos =
-                    { x = toFloat rawPos.x - toFloat model.w / 2, y = toFloat model.h / 2 - toFloat rawPos.y }
+                    { x = toFloat mouseX - toFloat model.w / 2
+                    , y = toFloat model.h / 2 - toFloat mouseY
+                    }
             in
             { model
                 | clicks =

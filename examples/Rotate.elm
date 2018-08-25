@@ -7,12 +7,12 @@ module Rotate exposing (main)
 
 import Animation exposing (..)
 import Browser.Dom exposing (getViewport)
-import Browser.Events exposing (onAnimationFrameDelta, onResize)
+import Browser.Events exposing (onAnimationFrameDelta, onClick, onResize)
 import Collage
 import Color
 import Element exposing (Element)
 import Html exposing (program)
-import Mouse
+import Json.Decode as Decode exposing (Decoder)
 import Task
 
 
@@ -31,7 +31,7 @@ model0 =
 
 type Msg
     = Tick Float
-    | Click Mouse.Position
+    | Click Int Int
     | Resize Int Int
     | NoOp
 
@@ -42,10 +42,13 @@ update act model =
         Tick dt ->
             { model | clock = model.clock + dt }
 
-        Click rawPos ->
+        Click mouseX mouseY ->
             let
                 ( dest_r, dest_theta ) =
-                    toPolar ( toFloat rawPos.x - toFloat model.w / 2, toFloat model.h / 2 - toFloat rawPos.y )
+                    toPolar
+                        ( toFloat mouseX - toFloat model.w / 2
+                        , toFloat model.h / 2 - toFloat mouseY
+                        )
 
                 theta =
                     retarget model.clock dest_theta model.theta |> speed 0.002 |> normalizeAngle
@@ -116,8 +119,15 @@ subs =
     Sub.batch
         [ onResize Resize
         , onAnimationFrameDelta Tick
-        , Mouse.clicks Click
+        , onClick mousePosition
         ]
+
+
+mousePosition : Decoder Msg
+mousePosition =
+    Decode.map2 Click
+        (Decode.field "pageX" Decode.int)
+        (Decode.field "pageY" Decode.int)
 
 
 main =

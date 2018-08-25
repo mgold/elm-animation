@@ -15,12 +15,12 @@ module Panel exposing (main)
 -}
 
 import Animation exposing (..)
-import Browser.Dom exposing (getViewport)
+import Browser.Dom exposing (getViewport, onClick)
 import Browser.Events exposing (onAnimationFrameDelta, onResize)
 import Color exposing (Color)
 import Element as E exposing (Element)
 import Html exposing (program)
-import Mouse
+import Json.Decode as Decode
 import Task
 
 
@@ -69,7 +69,7 @@ type Msg
 subs : Sub Msg
 subs =
     Sub.batch
-        [ Mouse.clicks (always Click)
+        [ onClick (Decode.succeed Click)
         , onAnimationFrameDelta Tick
         ]
 

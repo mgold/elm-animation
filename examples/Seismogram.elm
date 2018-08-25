@@ -23,12 +23,12 @@ module Seismogram exposing (main)
 
 import Animation exposing (..)
 import Browser.Dom exposing (getViewport)
-import Browser.Events exposing (onAnimationFrameDelta, onResize)
+import Browser.Events exposing (onAnimationFrameDelta, onClick, onResize)
 import Collage
 import Color
 import Element exposing (Element)
 import Html exposing (program)
-import Mouse
+import Json.Decode as Decode exposing (Decoder)
 import Task
 
 
@@ -53,7 +53,7 @@ model0 =
 type Msg
     = Tick Float
     | Resize Int Int
-    | Click Mouse.Position
+    | Click Int
     | Cull
     | NoOp
 
@@ -62,10 +62,16 @@ subs : Sub Msg
 subs =
     Sub.batch
         [ onAnimationFrameDelta Tick
-        , Mouse.clicks Click
+        , onClick mouseXPosition
         , onResize Resize
         , Time.every (0.5 * second) (always Cull)
         ]
+
+
+mouseXPosition : Decoder Msg
+mouseXPosition =
+    Decode.map Click
+        (Decode.field "pageX" Decode.int)
 
 
 update : Msg -> Model -> Model
@@ -84,7 +90,7 @@ update act model =
         Resize w h ->
             { model | w = w, h = h }
 
-        Click { x } ->
+        Click x ->
             let
                 xPos =
                     toFloat x / toFloat model.w
