@@ -13,10 +13,9 @@ import Animation exposing (..)
 import Browser
 import Browser.Dom exposing (getViewport)
 import Browser.Events exposing (onAnimationFrameDelta, onResize)
-import Collage
-import Color
-import Element exposing (Element)
 import Json.Decode exposing (Value)
+import Svg exposing (Svg)
+import Svg.Attributes as SA
 import Task
 
 
@@ -40,7 +39,6 @@ type alias Model =
 type Msg
     = Resize Int Int
     | Tick Float
-    | NoOp
 
 
 model0 =
@@ -70,48 +68,71 @@ update msg model =
         Resize width height ->
             { model | w = width, h = height }
 
-        NoOp ->
-            model
 
-
-scene : Model -> Element
-scene model =
+view : Model -> Svg Msg
+view model =
     let
         circle =
-            Collage.circle 8
-                |> Collage.filled Color.purple
-                |> Collage.move
-                    ( toFloat model.w * animate model.clock model.x - toFloat (model.w // 2)
-                    , if model.undone then
-                        -30
+            Svg.circle
+                [ SA.r "8"
+                , SA.fill "purple"
+                , SA.cx (String.fromFloat (toFloat model.w * animate model.clock model.x - toFloat (model.w // 2)))
+                , SA.cy <|
+                    if model.undone then
+                        "-30"
 
-                      else
-                        0
-                    )
+                    else
+                        "0"
+                ]
+                []
 
         dotsOut =
             List.map
                 (\x ->
-                    Collage.circle 3
-                        |> Collage.filled Color.lightPurple
-                        |> Collage.moveX (toFloat model.w * x - toFloat (model.w // 2))
+                    Svg.circle
+                        [ SA.r "3"
+                        , SA.fill "mediumpurple"
+                        , SA.cx (String.fromFloat (toFloat model.w * x - toFloat (model.w // 2)))
+                        ]
+                        []
                 )
                 model.dotsOut
 
         dotsBack =
             List.map
                 (\x ->
-                    Collage.circle 3
-                        |> Collage.filled Color.darkPurple
-                        |> Collage.move ( toFloat model.w * x - toFloat (model.w // 2), -30 )
+                    Svg.circle
+                        [ SA.r "3"
+                        , SA.fill "indigo"
+                        , SA.cx (String.fromFloat (toFloat model.w * x - toFloat (model.w // 2)))
+                        , SA.cy "-30"
+                        ]
+                        []
                 )
                 model.dotsBack
+
+        group =
+            Svg.g
+                [ SA.transform
+                    ("translate("
+                        ++ String.fromInt (model.w // 2)
+                        ++ " "
+                        ++ String.fromInt (model.h // 2)
+                        ++ ")"
+                    )
+                ]
+                (circle :: dotsOut ++ dotsBack)
     in
-    Collage.collage model.w model.h <| circle :: dotsOut ++ dotsBack
+    Svg.svg
+        [ SA.style "position:absolute;left:0;top:0"
+        , SA.width (String.fromInt model.w)
+        , SA.height (String.fromInt model.h)
+        ]
+        [ group ]
 
 
-subs : Sub Msg
-subs =
+subscriptions : Model -> Sub Msg
+subscriptions _ =
     Sub.batch
         [ onResize Resize
         , onAnimationFrameDelta Tick
@@ -131,6 +152,6 @@ main =
                     getViewport
                 )
         , update = \msg model -> ( update msg model, Cmd.none )
-        , subscriptions = always subs
-        , view = scene >> Element.toHtml
+        , subscriptions = subscriptions
+        , view = view
         }
