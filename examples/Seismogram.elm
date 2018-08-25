@@ -5,7 +5,7 @@ module Seismogram exposing (main)
    speed/duration. An older version had bugs where multiple retargets
    would cause the animation to overshoot by an arbitrary amount, and
    it would also become slow and unresponsive. After contemplating
-   what kind of complex algorithm could find  the optimal duration,
+   what kind of complex algorithm could find the optimal duration,
    considering the current velocity, direction of current vs. desired
    travel, timeRemaining, etc, I landed on the idea of retaining the
    old speed. This is very simple, you just have to be sure to convert
@@ -25,11 +25,11 @@ import Animation exposing (..)
 import Browser
 import Browser.Dom exposing (getViewport)
 import Browser.Events exposing (onAnimationFrameDelta, onClick, onResize)
-import Collage
-import Color
-import Element exposing (Element)
 import Json.Decode as Decode exposing (Decoder, Value)
+import Svg exposing (Svg)
+import Svg.Attributes as SA
 import Task
+import Time
 
 
 second : Float
@@ -55,11 +55,10 @@ type Msg
     | Resize Int Int
     | Click Int
     | Cull
-    | NoOp
 
 
-subs : Sub Msg
-subs =
+subscriptions : Model -> Sub Msg
+subscriptions _ =
     Sub.batch
         [ onAnimationFrameDelta Tick
         , onClick mouseXPosition
@@ -100,41 +99,64 @@ update act model =
         Cull ->
             { model | dots = List.take 200 model.dots }
 
-        NoOp ->
-            model
 
-
-render : Model -> Element
-render model =
+view : Model -> Svg Msg
+view model =
     let
         baseY =
-            toFloat model.h / -3
+            toFloat model.h * 2 / 3
 
         toX x =
-            toFloat model.w * x - toFloat (model.w // 2)
+            toFloat model.w * x
 
         line =
-            Collage.rect (toFloat model.w) 1 |> Collage.filled Color.gray |> Collage.moveY baseY
+            Svg.line
+                [ SA.x2 (String.fromInt model.w)
+                , SA.stroke "gray"
+                , SA.strokeWidth "1"
+                ]
+                []
 
         dest =
-            Collage.square 6 |> Collage.filled Color.red |> Collage.move ( toX <| getTo model.x, baseY )
+            Svg.rect
+                [ SA.width "6"
+                , SA.height "6"
+                , SA.fill "red"
+                , SA.x (String.fromFloat (-3 + toX (getTo model.x)))
+                , SA.y "-3"
+                ]
+                []
 
         circle =
-            Collage.circle 8
-                |> Collage.filled Color.purple
-                |> Collage.move ( toX <| animate model.clock model.x, baseY )
+            Svg.circle
+                [ SA.r "8"
+                , SA.fill "purple"
+                , SA.cx (String.fromFloat (toX <| animate model.clock model.x))
+                ]
+                []
 
         dots =
             List.map
                 (\( x, t ) ->
-                    Collage.circle 3
-                        |> Collage.filled Color.lightPurple
-                        |> Collage.moveX (toFloat model.w * x - toFloat (model.w // 2))
-                        |> Collage.moveY (baseY - (t - model.clock) / 10)
+                    Svg.circle
+                        [ SA.r "3"
+                        , SA.fill "mediumpurple"
+                        , SA.cx (String.fromFloat (toFloat model.w * x))
+                        , SA.cy (String.fromFloat ((t - model.clock) / 10))
+                        ]
+                        []
                 )
                 model.dots
     in
-    Collage.collage model.w model.h <| line :: dest :: circle :: dots
+    Svg.svg
+        [ SA.style "position:absolute;left:0;top:0"
+        , SA.width (String.fromInt model.w)
+        , SA.height (String.fromInt model.h)
+        ]
+        [ Svg.g
+            [ SA.transform ("translate(0 " ++ String.fromFloat baseY ++ ")") ]
+            (line :: dest :: circle :: dots)
+        ]
 
 
 main : Program Value Model Msg
@@ -150,6 +172,6 @@ main =
                     getViewport
                 )
         , update = \msg model -> ( update msg model, Cmd.none )
-        , subscriptions = always subs
-        , view = render >> Element.toHtml
+        , subscriptions = subscriptions
+        , view = view
         }
