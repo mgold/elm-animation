@@ -2,18 +2,15 @@ module ButtonMenu exposing (main)
 
 {- Button menu example. Implements the essential visual
    form implemented with [React Motion here](https://medium.com/@nashvail/a-gentle-introduction-to-react-motion-dc50dd9f2459)
-   Uses half as many lines, but the devil is in the details,
-   and this isn’t a usable component itself.
 -}
 
 import Animation exposing (..)
 import Browser
 import Browser.Dom exposing (getViewport)
 import Browser.Events exposing (onAnimationFrameDelta, onClick, onResize)
-import Collage
-import Color exposing (darkGray, lightBlue, lightGray, white)
-import Element exposing (Element)
 import Json.Decode as Decode exposing (Decoder, Value)
+import Svg exposing (Svg)
+import Svg.Attributes as SA
 import Task
 
 
@@ -108,40 +105,81 @@ update act model =
             model
 
 
-scene : Model -> Element
-scene { w, h, rs, theta, clock } =
+view : Model -> Svg Msg
+view { w, h, rs, theta, clock } =
     let
         bg =
-            Collage.rect (toFloat w) (toFloat h) |> Collage.filled lightGray
+            Svg.rect
+                [ SA.width (String.fromInt w)
+                , SA.height (String.fromInt h)
+                , SA.fill "lightgray"
+                ]
+                []
 
         angle =
             animate clock theta
 
         rect =
-            Collage.rect (mainButtonRad / 5) (mainButtonRad / 1.25) |> Collage.filled white
+            Svg.rect
+                [ SA.width (String.fromFloat (mainButtonRad / 5))
+                , SA.height (String.fromFloat (mainButtonRad / 1.25))
+                , SA.x (String.fromFloat (-mainButtonRad / 10))
+                , SA.y (String.fromFloat (-mainButtonRad / 2.5))
+                , SA.fill "white"
+                ]
+                []
 
         circle =
-            Collage.circle mainButtonRad |> Collage.filled lightBlue
+            Svg.circle
+                [ SA.r (String.fromFloat mainButtonRad)
+                , SA.fill "blue"
+                ]
+                []
 
         group =
-            Collage.group [ circle, rect, rect |> Collage.rotate (degrees 90) ]
-                |> Collage.rotate angle
+            Svg.g [ SA.transform ("rotate(" ++ String.fromFloat (angle / pi * 180) ++ ")") ]
+                [ circle
+                , rect
+                , Svg.g [ SA.transform "rotate(90)" ] [ rect ]
+                ]
 
-        child func i a =
-            Collage.circle childButtonRad
-                |> func
-                |> Collage.move (fromPolar ( animate clock a, baseAngle + separationAngle * toFloat i ))
-
-        stroked =
-            Collage.outlined (Collage.solid darkGray)
-
-        filled =
-            Collage.filled white
-
-        children =
-            List.indexedMap (child stroked) rs ++ List.indexedMap (child filled) rs
+        child isFilled i a =
+            let
+                ( x, y ) =
+                    fromPolar
+                        ( animate clock a
+                        , -baseAngle - separationAngle * toFloat i
+                        )
+            in
+            Svg.circle
+                [ SA.r (String.fromFloat childButtonRad)
+                , SA.cx (String.fromFloat x)
+                , SA.cy (String.fromFloat y)
+                , SA.fill "white"
+                , SA.stroke "darkgray"
+                , SA.strokeWidth "1"
+                ]
+                []
     in
-    Collage.collage w h (bg :: children ++ [ group ])
+    Svg.svg
+        [ SA.style "position:absolute;left:0;top:0"
+        , SA.width (String.fromInt w)
+        , SA.height (String.fromInt h)
+        ]
+        [ bg
+        , Svg.g
+            [ SA.transform
+                ("translate("
+                    ++ String.fromInt (w // 2)
+                    ++ ","
+                    ++ String.fromInt (h // 2)
+                    ++ ")"
+                )
+            ]
+            (List.indexedMap (child False) rs
+                ++ [ group ]
+            )
+        ]
 
 
 subs : Sub Msg
@@ -174,5 +212,5 @@ main =
                 )
         , update = \msg model -> ( update msg model, Cmd.none )
         , subscriptions = always subs
-        , view = scene >> Element.toHtml
+        , view = view
         }
