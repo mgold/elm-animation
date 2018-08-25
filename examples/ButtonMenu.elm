@@ -7,14 +7,14 @@ module ButtonMenu exposing (main)
 -}
 
 import Animation exposing (..)
-import Browser.Events exposing (onAnimationFrameDelta)
+import Browser.Dom exposing (getViewport)
+import Browser.Events exposing (onAnimationFrameDelta, onResize)
 import Collage
 import Color exposing (darkGray, lightBlue, lightGray, white)
 import Element exposing (Element)
 import Html exposing (program)
 import Mouse
 import Task
-import Window
 
 
 mainButtonRad =
@@ -48,7 +48,7 @@ baseAngle =
 type Msg
     = Tick Float
     | Click Mouse.Position
-    | Resize Window.Size
+    | Resize Int Int
     | NoOp
 
 
@@ -101,7 +101,7 @@ update act model =
             else
                 model
 
-        Resize { width, height } ->
+        Resize width height ->
             { model | w = width, h = height }
 
         NoOp ->
@@ -147,7 +147,7 @@ scene { w, h, rs, theta, clock } =
 subs : Sub Msg
 subs =
     Sub.batch
-        [ Window.resizes Resize
+        [ onResize Resize
         , onAnimationFrameDelta Tick
         , Mouse.clicks Click
         ]
@@ -155,7 +155,14 @@ subs =
 
 main =
     program
-        { init = ( model0, Task.perform Resize Window.size )
+        { init =
+            ( model0
+            , Task.perform
+                (\{ viewport } ->
+                    Resize (round viewport.width) (round viewport.height)
+                )
+                getViewport
+            )
         , update = \msg model -> ( update msg model, Cmd.none )
         , subscriptions = always subs
         , view = scene >> Element.toHtml

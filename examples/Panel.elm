@@ -15,13 +15,13 @@ module Panel exposing (main)
 -}
 
 import Animation exposing (..)
-import Browser.Events exposing (onAnimationFrameDelta)
+import Browser.Dom exposing (getViewport)
+import Browser.Events exposing (onAnimationFrameDelta, onResize)
 import Color exposing (Color)
 import Element as E exposing (Element)
 import Html exposing (program)
 import Mouse
 import Task
-import Window
 
 
 second : Float
@@ -49,18 +49,19 @@ type alias Model =
     , newtClock : Clock
     , forward : Bool
     , newtFactor : Animation
-    , windowSize : Window.Size
+    , width : Int
+    , height : Int
     }
 
 
 model0 : Model
 model0 =
-    Model 0 0 0 False (static -1) (Window.Size 0 0)
+    Model 0 0 0 False (static -1) 0 0
 
 
 type Msg
     = Tick Float
-    | Resize Window.Size
+    | Resize Int Int
     | Click
     | NoOp
 
@@ -87,8 +88,8 @@ update action model =
         NoOp ->
             model
 
-        Resize size ->
-            { model | windowSize = size }
+        Resize w h ->
+            { model | width = w, height = h }
 
         Tick dt ->
             let
@@ -218,7 +219,14 @@ scene { arisClock, newtClock } =
 
 main =
     program
-        { init = ( model0, Task.perform Resize Window.size )
+        { init =
+            ( model0
+            , Task.perform
+                (\{ viewport } ->
+                    Resize (round viewport.width) (round viewport.height)
+                )
+                getViewport
+            )
         , update = \msg model -> ( update msg model, Cmd.none )
         , subscriptions = always subs
         , view = scene >> E.toHtml

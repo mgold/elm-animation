@@ -27,13 +27,13 @@ module Pacman exposing (main)
 -}
 
 import Animation exposing (..)
-import Browser.Events exposing (onAnimationFrameDelta)
+import Browser.Dom exposing (getViewport)
+import Browser.Events exposing (onAnimationFrameDelta, onResize)
 import Collage
 import Color exposing (yellow)
 import Element exposing (Element)
 import Html exposing (program)
 import Task exposing (Task)
-import Window
 
 
 type alias Model =
@@ -62,7 +62,7 @@ model0 =
 
 type Msg
     = Tick Float
-    | Resize Window.Size
+    | Resize Int Int
     | NoOp
 
 
@@ -100,7 +100,7 @@ update msg model =
             in
             { model | clock = clock, r = r, x = x, y = y }
 
-        Resize { width, height } ->
+        Resize width height ->
             { model | w = width, h = height }
 
         NoOp ->
@@ -125,14 +125,21 @@ scene { w, h, r, x, y, clock } =
 subs : Sub Msg
 subs =
     Sub.batch
-        [ Window.resizes Resize
+        [ onResize Resize
         , onAnimationFrameDelta Tick
         ]
 
 
 main =
     program
-        { init = ( model0, Task.perform Resize Window.size )
+        { init =
+            ( model0
+            , Task.perform
+                (\{ viewport } ->
+                    Resize (round viewport.width) (round viewport.height)
+                )
+                getViewport
+            )
         , update = \msg model -> ( update msg model, Cmd.none )
         , subscriptions = always subs
         , view = scene >> Element.toHtml

@@ -30,7 +30,8 @@ module Retarget exposing (main)
 -}
 
 import Animation exposing (..)
-import Browser.Events exposing (onAnimationFrameDelta)
+import Browser.Dom exposing (getViewport)
+import Browser.Events exposing (onAnimationFrameDelta, onResize)
 import Collage as C exposing (Form)
 import Color exposing (Color)
 import Element as E exposing (Element)
@@ -38,18 +39,6 @@ import Html exposing (program)
 import Keyboard
 import Mouse
 import Task
-import Window
-
-
-
-{-
-   mouseLocation : Signal ( Float, Float )
-   mouseLocation =
-     Signal.map2
-       (\( w, h ) ( x, y ) -> ( toFloat x - toFloat w / 2, toFloat h / 2 - toFloat y ))
-       Window.dimensions
-       Mouse.position
--}
 
 
 millisecond : Float
@@ -88,7 +77,7 @@ model0 =
 
 type Msg
     = Tick Float
-    | Resize Window.Size
+    | Resize Int Int
     | Click Mouse.Position
     | Reset
     | NoOp
@@ -129,7 +118,7 @@ subs =
                     Reset
             )
         , Mouse.clicks Click
-        , Window.resizes Resize
+        , onResize Resize
         , onAnimationFrameDelta Tick
         ]
 
@@ -140,7 +129,7 @@ update action model =
         Tick dt ->
             updateTick dt model
 
-        Resize { width, height } ->
+        Resize width height ->
             { model | w = width, h = height }
 
         Click rawPos ->
@@ -308,7 +297,14 @@ thick c =
 
 main =
     program
-        { init = ( model0, Task.perform Resize Window.size )
+        { init =
+            ( model0
+            , Task.perform
+                (\{ viewport } ->
+                    Resize (round viewport.width) (round viewport.height)
+                )
+                getViewport
+            )
         , update = \msg model -> ( update msg model, Cmd.none )
         , subscriptions = always subs
         , view = render >> E.toHtml

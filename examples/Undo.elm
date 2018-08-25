@@ -10,13 +10,13 @@ module Undo exposing (main)
 -}
 
 import Animation exposing (..)
-import Browser.Events exposing (onAnimationFrameDelta)
+import Browser.Dom exposing (getViewport)
+import Browser.Events exposing (onAnimationFrameDelta, onResize)
 import Collage
 import Color
 import Element exposing (Element)
 import Html exposing (program)
 import Task
-import Window
 
 
 {-| Asymmetric ease in cubic
@@ -37,7 +37,7 @@ type alias Model =
 
 
 type Msg
-    = Resize Window.Size
+    = Resize Int Int
     | Tick Float
     | NoOp
 
@@ -66,7 +66,7 @@ update msg model =
             else
                 { model | dotsBack = pos :: model.dotsBack, clock = clock }
 
-        Resize { width, height } ->
+        Resize width height ->
             { model | w = width, h = height }
 
         NoOp ->
@@ -112,14 +112,21 @@ scene model =
 subs : Sub Msg
 subs =
     Sub.batch
-        [ Window.resizes Resize
+        [ onResize Resize
         , onAnimationFrameDelta Tick
         ]
 
 
 main =
     program
-        { init = ( model0, Task.perform Resize Window.size )
+        { init =
+            ( model0
+            , Task.perform
+                (\{ viewport } ->
+                    Resize (round viewport.width) (round viewport.height)
+                )
+                getViewport
+            )
         , update = \msg model -> ( update msg model, Cmd.none )
         , subscriptions = always subs
         , view = scene >> Element.toHtml

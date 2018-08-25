@@ -22,14 +22,14 @@ module Seismogram exposing (main)
 -}
 
 import Animation exposing (..)
-import Browser.Events exposing (onAnimationFrameDelta)
+import Browser.Dom exposing (getViewport)
+import Browser.Events exposing (onAnimationFrameDelta, onResize)
 import Collage
 import Color
 import Element exposing (Element)
 import Html exposing (program)
 import Mouse
 import Task
-import Window
 
 
 second : Float
@@ -52,7 +52,7 @@ model0 =
 
 type Msg
     = Tick Float
-    | Resize Window.Size
+    | Resize Int Int
     | Click Mouse.Position
     | Cull
     | NoOp
@@ -63,7 +63,7 @@ subs =
     Sub.batch
         [ onAnimationFrameDelta Tick
         , Mouse.clicks Click
-        , Window.resizes Resize
+        , onResize Resize
         , Time.every (0.5 * second) (always Cull)
         ]
 
@@ -81,8 +81,8 @@ update act model =
             in
             { model | dots = ( pos, clock ) :: model.dots, clock = clock }
 
-        Resize size ->
-            { model | w = size.width, h = size.height }
+        Resize w h ->
+            { model | w = w, h = h }
 
         Click { x } ->
             let
@@ -133,7 +133,14 @@ render model =
 
 main =
     program
-        { init = ( model0, Task.perform Resize Window.size )
+        { init =
+            ( model0
+            , Task.perform
+                (\{ viewport } ->
+                    Resize (round viewport.width) (round viewport.height)
+                )
+                getViewport
+            )
         , update = \msg model -> ( update msg model, Cmd.none )
         , subscriptions = always subs
         , view = render >> Element.toHtml
