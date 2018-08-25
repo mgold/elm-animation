@@ -16,11 +16,11 @@ module Panel exposing (main)
 
 import Animation exposing (..)
 import Browser
-import Browser.Dom exposing (getViewport, onClick)
-import Browser.Events exposing (onAnimationFrameDelta, onResize)
-import Color exposing (Color)
-import Element as E exposing (Element)
+import Browser.Dom exposing (getViewport)
+import Browser.Events exposing (onAnimationFrameDelta, onClick, onResize)
 import Json.Decode as Decode exposing (Value)
+import Svg exposing (Svg)
+import Svg.Attributes as SA
 import Task
 
 
@@ -41,16 +41,20 @@ color =
     animation 0 |> duration second
 
 
+type RGB
+    = RGB Int Int Int
+
+
 type alias Model =
     { trueClock : Clock
-    , arisClock : Clock
 
     -- Aristotelian and Newtonian clocks
+    , arisClock : Clock
     , newtClock : Clock
     , forward : Bool
     , newtFactor : Animation
-    , width : Int
-    , height : Int
+    , w : Int
+    , h : Int
     }
 
 
@@ -66,8 +70,8 @@ type Msg
     | NoOp
 
 
-subs : Sub Msg
-subs =
+subscriptions : Model -> Sub Msg
+subscriptions _ =
     Sub.batch
         [ onClick (Decode.succeed Click)
         , onAnimationFrameDelta Tick
@@ -89,7 +93,7 @@ update action model =
             model
 
         Resize w h ->
-            { model | width = w, height = h }
+            { model | w = w, h = h }
 
         Tick dt ->
             let
@@ -100,19 +104,17 @@ update action model =
                 | trueClock = newTrueClock
                 , arisClock =
                     model.arisClock
-                        + dt
-                        * (if model.forward then
-                            1
+                        -- always +dt or -dt
+                        + (if model.forward then
+                            dt
 
                            else
-                            -1
+                            -dt
                           )
-
-                -- always 1 or -1
                 , newtClock =
-                    model.newtClock + dt * animate newTrueClock model.newtFactor
-
-                -- often between 1 or -1
+                    model.newtClock
+                        -- often between +dt and -dt
+                        + (dt * animate newTrueClock model.newtFactor)
             }
 
         Click ->
@@ -120,30 +122,23 @@ update action model =
                 { model
                     | forward = False
                     , newtFactor =
-                        if
-                            model.newtClock > second
+                        if model.newtClock > second then
                             -- skip tweening if restarting animation from rest
-                        then
                             static -1
 
                         else
                             animateRev |> delay model.trueClock
-                    , arisClock =
-                        min model.arisClock second
 
                     -- reset clocks that have gotten really big
-                    , newtClock =
-                        min model.newtClock second
-
                     -- but keep them if we're still animating
+                    , arisClock = min model.arisClock second
+                    , newtClock = min model.newtClock second
                 }
 
             else
+                -- works exactly opposite the other case
                 { model
-                    | forward =
-                        True
-
-                    -- works exactly opposite the other case
+                    | forward = True
                     , newtFactor =
                         if model.newtClock < 0 then
                             static 1
@@ -163,58 +158,62 @@ lerp_ from to v =
     round (lerp (toFloat from) (toFloat to) v)
 
 
-colorEase from to v =
-    let
-        ( rgb1, rgb2 ) =
-            ( Color.toRgb from, Color.toRgb to )
-
-        ( r1, g1, b1, a1 ) =
-            ( rgb1.red, rgb1.green, rgb1.blue, rgb1.alpha )
-
-        ( r2, g2, b2, a2 ) =
-            ( rgb2.red, rgb2.green, rgb2.blue, rgb2.alpha )
-    in
-    Color.rgba (lerp_ r1 r2 v) (lerp_ g1 g2 v) (lerp_ b1 b2 v) (lerp a1 a2 v)
+colorEase : RGB -> RGB -> Float -> RGB
+colorEase (RGB r1 g1 b1) (RGB r2 g2 b2) v =
+    RGB
+        (lerp_ r1 r2 v)
+        (lerp_ g1 g2 v)
+        (lerp_ b1 b2 v)
 
 
-easeColor : Float -> Color
-easeColor =
-    colorEase Color.purple (Color.rgb 74 178 182)
-
-
-padding : Element
+padding : Float
 padding =
-    E.spacer 50 50
+    50
 
 
-render : Clock -> Element
-render clock =
+render : Float -> Clock -> Svg Msg
+render yOffset clock =
     let
         wid =
-            animate clock width |> round
+            animate clock width
 
         hei =
-            animate clock height |> round
+            animate clock height
 
-        clr =
-            animate clock color |> easeColor
+        (RGB r g b) =
+            color
+                |> animate clock
+                |> colorEase (RGB 115 51 128) (RGB 74 178 182)
     in
-    E.spacer wid hei |> E.color clr
+    Svg.rect
+        [ SA.width (String.fromFloat wid)
+        , SA.height (String.fromFloat hei)
+        , SA.y (String.fromFloat yOffset)
+        , SA.fill ("rgb(" ++ String.fromInt r ++ "," ++ String.fromInt g ++ "," ++ String.fromInt b ++ ")")
+        ]
+        []
 
 
-scene : Model -> Element
-scene { arisClock, newtClock } =
-    E.beside padding <|
-        E.flow
-            E.down
-            [ padding
-            , render arisClock
-            , E.spacer 1 <| round <| getTo height - animate arisClock height
-
-            -- keep top of second panel fixed
-            , padding
-            , render newtClock
+view : Model -> Svg Msg
+view { arisClock, newtClock, w, h } =
+    Svg.svg
+        [ SA.style "position:absolute;left:0;top:0"
+        , SA.width (String.fromInt w)
+        , SA.height (String.fromInt h)
+        ]
+        [ Svg.g
+            [ SA.transform
+                ("translate("
+                    ++ String.fromFloat padding
+                    ++ " "
+                    ++ String.fromFloat padding
+                    ++ ")"
+                )
             ]
+            [ render 0 arisClock
+            , render (padding + getTo height) newtClock
+            ]
+        ]
 
 
 main : Program Value Model Msg
@@ -230,6 +229,6 @@ main =
                     getViewport
                 )
         , update = \msg model -> ( update msg model, Cmd.none )
-        , subscriptions = always subs
-        , view = scene >> E.toHtml
+        , subscriptions = subscriptions
+        , view = view
         }
