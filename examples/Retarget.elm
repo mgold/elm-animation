@@ -31,13 +31,13 @@ module Retarget exposing (main)
 
 import Animation exposing (..)
 import Browser.Dom exposing (getViewport)
-import Browser.Events exposing (onAnimationFrameDelta, onClick, onResize)
+import Browser.Events exposing (onAnimationFrameDelta, onClick, onKeyDown, onKeyUp, onResize)
 import Collage as C exposing (Form)
 import Color exposing (Color)
 import Element as E exposing (Element)
 import Html exposing (program)
+import Html.Events exposing (keyCode)
 import Json.Decode as Decode exposing (Decoder)
-import Keyboard
 import Task
 
 
@@ -85,42 +85,34 @@ type Msg
     | Smear Bool
 
 
-keycode =
-    { enter = 13, shift = 16, space = 32 }
-
-
 subs : Sub Msg
 subs =
     Sub.batch
-        [ Keyboard.downs
-            (\code ->
-                if code == keycode.enter then
-                    Reset
-
-                else if code == keycode.shift then
-                    Slow True
-
-                else if code == keycode.space then
-                    Smear True
-
-                else
-                    Reset
-            )
-        , Keyboard.ups
-            (\code ->
-                if code == keycode.shift then
-                    Slow False
-
-                else if code == keycode.space then
-                    Smear False
-
-                else
-                    Reset
-            )
+        [ onKeyDown (keyboardMsg True)
+        , onKeyUp (keyboardMsg False)
         , onClick mousePosition
         , onResize Resize
         , onAnimationFrameDelta Tick
         ]
+
+
+keyboardMsg : Bool -> Decoder Msg
+keyboardMsg isDown =
+    Decode.map
+        (\code ->
+            case code of
+                -- shift key
+                16 ->
+                    Slow isDown
+
+                -- space key
+                32 ->
+                    Smear isDown
+
+                _ ->
+                    Reset
+        )
+        keyCode
 
 
 mousePosition : Decoder Msg
