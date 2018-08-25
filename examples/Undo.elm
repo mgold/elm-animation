@@ -10,12 +10,13 @@ module Undo exposing (main)
 -}
 
 import Animation exposing (..)
+import Browser
 import Browser.Dom exposing (getViewport)
 import Browser.Events exposing (onAnimationFrameDelta, onResize)
 import Collage
 import Color
 import Element exposing (Element)
-import Html exposing (program)
+import Json.Decode exposing (Value)
 import Task
 
 
@@ -117,16 +118,18 @@ subs =
         ]
 
 
+main : Program Value Model Msg
 main =
-    program
+    Browser.element
         { init =
-            ( model0
-            , Task.perform
-                (\{ viewport } ->
-                    Resize (round viewport.width) (round viewport.height)
+            always
+                ( model0
+                , Task.perform
+                    (\{ viewport } ->
+                        Resize (round viewport.width) (round viewport.height)
+                    )
+                    getViewport
                 )
-                getViewport
-            )
         , update = \msg model -> ( update msg model, Cmd.none )
         , subscriptions = always subs
         , view = scene >> Element.toHtml

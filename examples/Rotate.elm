@@ -6,13 +6,13 @@ module Rotate exposing (main)
 -}
 
 import Animation exposing (..)
+import Browser
 import Browser.Dom exposing (getViewport)
 import Browser.Events exposing (onAnimationFrameDelta, onClick, onResize)
 import Collage
 import Color
 import Element exposing (Element)
-import Html exposing (program)
-import Json.Decode as Decode exposing (Decoder)
+import Json.Decode as Decode exposing (Decoder, Value)
 import Task
 
 
@@ -130,16 +130,18 @@ mousePosition =
         (Decode.field "pageY" Decode.int)
 
 
+main : Program Value Model Msg
 main =
-    program
+    Browser.element
         { init =
-            ( model0
-            , Task.perform
-                (\{ viewport } ->
-                    Resize (round viewport.width) (round viewport.height)
+            always
+                ( model0
+                , Task.perform
+                    (\{ viewport } ->
+                        Resize (round viewport.width) (round viewport.height)
+                    )
+                    getViewport
                 )
-                getViewport
-            )
         , update = \msg model -> ( update msg model, Cmd.none )
         , subscriptions = always subs
         , view = scene >> Element.toHtml

@@ -1,11 +1,11 @@
 module Sliders exposing (main)
 
 import Animation exposing (..)
+import Browser
 import Browser.Events exposing (onAnimationFrameDelta, onClick)
 import Color
 import Element as E exposing (Element)
-import Html exposing (program)
-import Json.Decode as Decode
+import Json.Decode as Decode exposing (Value)
 import Text
 
 
@@ -130,9 +130,10 @@ render model =
             ]
 
 
+main : Program Value Model Msg
 main =
-    program
-        { init = ( model0, Cmd.none )
+    Browser.element
+        { init = always ( model0, Cmd.none )
         , update =
             \msg model -> ( update msg model, Cmd.none )
         , subscriptions = always subs

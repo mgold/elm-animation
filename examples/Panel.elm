@@ -15,12 +15,12 @@ module Panel exposing (main)
 -}
 
 import Animation exposing (..)
+import Browser
 import Browser.Dom exposing (getViewport, onClick)
 import Browser.Events exposing (onAnimationFrameDelta, onResize)
 import Color exposing (Color)
 import Element as E exposing (Element)
-import Html exposing (program)
-import Json.Decode as Decode
+import Json.Decode as Decode exposing (Value)
 import Task
 
 
@@ -217,16 +217,18 @@ scene { arisClock, newtClock } =
             ]
 
 
+main : Program Value Model Msg
 main =
-    program
+    Browser.element
         { init =
-            ( model0
-            , Task.perform
-                (\{ viewport } ->
-                    Resize (round viewport.width) (round viewport.height)
+            always
+                ( model0
+                , Task.perform
+                    (\{ viewport } ->
+                        Resize (round viewport.width) (round viewport.height)
+                    )
+                    getViewport
                 )
-                getViewport
-            )
         , update = \msg model -> ( update msg model, Cmd.none )
         , subscriptions = always subs
         , view = scene >> E.toHtml

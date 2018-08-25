@@ -5,10 +5,11 @@ module BarChart exposing (main)
 -}
 
 import Animation exposing (..)
+import Browser
 import Browser.Events exposing (onAnimationFrameDelta)
 import Color exposing (gray, red)
 import Element exposing (Element, color, down, flow, right, spacer)
-import Html exposing (program)
+import Json.Decode exposing (Value)
 import Random
 
 
@@ -67,9 +68,10 @@ renderClosure =
     render animations
 
 
+main : Program Value Clock Float
 main =
-    program
-        { init = ( 0, Cmd.none )
+    Browser.element
+        { init = always ( 0, Cmd.none )
         , update = \dt t -> ( t + dt, Cmd.none )
         , subscriptions = \model -> onAnimationFrameDelta identity
         , view = renderClosure >> Element.toHtml
