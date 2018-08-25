@@ -1,22 +1,31 @@
 module Sliders exposing (main)
 
 import Animation exposing (..)
-import AnimationFrame
+import Browser.Events exposing (onAnimationFrameDelta)
 import Color
 import Element as E exposing (Element)
 import Html exposing (program)
 import Mouse
 import Text
-import Time exposing (Time)
 
 
 type alias Model =
-    { clock : Time
+    { clock : Clock
     , a1 : Animation
     , a2 : Animation
     , a3 : Animation
     , initial : Bool
     }
+
+
+second : Float
+second =
+    1000
+
+
+millisecond : Float
+millisecond =
+    1
 
 
 stay =
@@ -29,7 +38,7 @@ model0 =
 
 
 type Msg
-    = Tick Time
+    = Tick Float
     | Click
 
 
@@ -37,7 +46,7 @@ subs : Sub Msg
 subs =
     Sub.batch
         [ Mouse.clicks (always Click)
-        , AnimationFrame.times Tick
+        , onAnimationFrameDelta Tick
         ]
 
 
@@ -48,14 +57,14 @@ slideLen =
 update : Msg -> Model -> Model
 update action model =
     case action of
-        Tick newTime ->
-            { model | clock = newTime }
+        Tick dt ->
+            { model | clock = model.clock + dt }
 
         Click ->
             if model.initial then
                 let
                     a =
-                        animation model.clock |> from 0 |> to slideLen |> duration (1.2 * Time.second)
+                        animation model.clock |> from 0 |> to slideLen |> duration (1.2 * second)
                 in
                 { model | a1 = a, a2 = a, a3 = a, initial = False }
 
@@ -65,7 +74,7 @@ update action model =
                         model.clock
 
                     setDur =
-                        duration (750 * Time.millisecond)
+                        duration (750 * millisecond)
 
                     dest =
                         getFrom model.a1

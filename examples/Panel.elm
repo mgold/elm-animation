@@ -15,14 +15,18 @@ module Panel exposing (main)
 -}
 
 import Animation exposing (..)
-import AnimationFrame
+import Browser.Events exposing (onAnimationFrameDelta)
 import Color exposing (Color)
 import Element as E exposing (Element)
 import Html exposing (program)
 import Mouse
 import Task
-import Time exposing (Time, second)
 import Window
+
+
+second : Float
+second =
+    1000
 
 
 width =
@@ -38,12 +42,11 @@ color =
 
 
 type alias Model =
-    { trueClock : Time
-    , arisClock :
-        Time
+    { trueClock : Clock
+    , arisClock : Clock
 
     -- Aristotelian and Newtonian clocks
-    , newtClock : Time
+    , newtClock : Clock
     , forward : Bool
     , newtFactor : Animation
     , windowSize : Window.Size
@@ -56,7 +59,7 @@ model0 =
 
 
 type Msg
-    = Tick Time
+    = Tick Float
     | Resize Window.Size
     | Click
     | NoOp
@@ -66,7 +69,7 @@ subs : Sub Msg
 subs =
     Sub.batch
         [ Mouse.clicks (always Click)
-        , AnimationFrame.diffs Tick
+        , onAnimationFrameDelta Tick
         ]
 
 
@@ -183,7 +186,7 @@ padding =
     E.spacer 50 50
 
 
-render : Time -> Element
+render : Clock -> Element
 render clock =
     let
         wid =

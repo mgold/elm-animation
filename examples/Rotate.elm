@@ -6,19 +6,23 @@ module Rotate exposing (main)
 -}
 
 import Animation exposing (..)
-import AnimationFrame
+import Browser.Events exposing (onAnimationFrameDelta)
 import Collage
 import Color
 import Element exposing (Element)
 import Html exposing (program)
 import Mouse
 import Task
-import Time exposing (Time)
 import Window
 
 
 type alias Model =
-    { w : Int, h : Int, theta : Animation, r : Animation, clock : Time }
+    { w : Int
+    , h : Int
+    , theta : Animation
+    , r : Animation
+    , clock : Clock
+    }
 
 
 model0 =
@@ -26,7 +30,7 @@ model0 =
 
 
 type Msg
-    = Tick Time
+    = Tick Float
     | Click Mouse.Position
     | Resize Window.Size
     | NoOp
@@ -111,7 +115,7 @@ subs : Sub Msg
 subs =
     Sub.batch
         [ Window.resizes Resize
-        , AnimationFrame.diffs Tick
+        , onAnimationFrameDelta Tick
         , Mouse.clicks Click
         ]
 

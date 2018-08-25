@@ -10,13 +10,12 @@ module Undo exposing (main)
 -}
 
 import Animation exposing (..)
-import AnimationFrame
+import Browser.Events exposing (onAnimationFrameDelta)
 import Collage
 import Color
 import Element exposing (Element)
 import Html exposing (program)
 import Task
-import Time exposing (Time)
 import Window
 
 
@@ -30,7 +29,7 @@ type alias Model =
     { w : Int
     , h : Int
     , x : Animation
-    , clock : Time
+    , clock : Clock
     , undone : Bool
     , dotsOut : List Float
     , dotsBack : List Float
@@ -39,7 +38,7 @@ type alias Model =
 
 type Msg
     = Resize Window.Size
-    | Tick Time
+    | Tick Float
     | NoOp
 
 
@@ -114,7 +113,7 @@ subs : Sub Msg
 subs =
     Sub.batch
         [ Window.resizes Resize
-        , AnimationFrame.diffs Tick
+        , onAnimationFrameDelta Tick
         ]
 
 

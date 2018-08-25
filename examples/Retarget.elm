@@ -30,7 +30,7 @@ module Retarget exposing (main)
 -}
 
 import Animation exposing (..)
-import AnimationFrame
+import Browser.Events exposing (onAnimationFrameDelta)
 import Collage as C exposing (Form)
 import Color exposing (Color)
 import Element as E exposing (Element)
@@ -38,7 +38,6 @@ import Html exposing (program)
 import Keyboard
 import Mouse
 import Task
-import Time exposing (Time)
 import Window
 
 
@@ -53,19 +52,26 @@ import Window
 -}
 
 
+millisecond : Float
+millisecond =
+    1
+
+
 type alias Pos =
-    { x : Float, y : Float }
+    { x : Float
+    , y : Float
+    }
 
 
 type alias Model =
-    { clock : Time
+    { clock : Clock
     , x : Animation
     , y : Animation
     , w : Int
     , h : Int
     , trail : List Pos
     , clicks : List Pos
-    , lastClickTime : Time
+    , lastClickTime : Clock
     , slow : Bool
     , smear : Bool
     }
@@ -81,7 +87,7 @@ model0 =
 
 
 type Msg
-    = Tick Time
+    = Tick Float
     | Resize Window.Size
     | Click Mouse.Position
     | Reset
@@ -124,7 +130,7 @@ subs =
             )
         , Mouse.clicks Click
         , Window.resizes Resize
-        , AnimationFrame.diffs Tick
+        , onAnimationFrameDelta Tick
         ]
 
 
@@ -171,7 +177,7 @@ close a b =
     abs (a - b) < 1
 
 
-updateTick : Time -> Model -> Model
+updateTick : Float -> Model -> Model
 updateTick dt model =
     let
         clock =
@@ -187,7 +193,7 @@ updateTick dt model =
             { x = animate clock model.x, y = animate clock model.y }
 
         trail_dt =
-            Time.millisecond * 30
+            millisecond * 30
 
         recentlyClicked =
             model.lastClickTime + trail_dt > clock
@@ -215,7 +221,7 @@ updateTick dt model =
     { model | clock = clock, trail = trail, lastClickTime = lastClickTime }
 
 
-acceleration : Time -> Animation -> Float
+acceleration : Float -> Animation -> Float
 acceleration t a =
     let
         v0 =

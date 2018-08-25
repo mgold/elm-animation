@@ -7,14 +7,13 @@ module ButtonMenu exposing (main)
 -}
 
 import Animation exposing (..)
-import AnimationFrame
+import Browser.Events exposing (onAnimationFrameDelta)
 import Collage
 import Color exposing (darkGray, lightBlue, lightGray, white)
 import Element exposing (Element)
 import Html exposing (program)
 import Mouse
 import Task
-import Time exposing (Time)
 import Window
 
 
@@ -47,7 +46,7 @@ baseAngle =
 
 
 type Msg
-    = Tick Time
+    = Tick Float
     | Click Mouse.Position
     | Resize Window.Size
     | NoOp
@@ -58,7 +57,7 @@ type alias Model =
     , h : Int
     , theta : Animation
     , rs : List Animation
-    , clock : Time
+    , clock : Clock
     , open : Bool
     }
 
@@ -149,7 +148,7 @@ subs : Sub Msg
 subs =
     Sub.batch
         [ Window.resizes Resize
-        , AnimationFrame.diffs Tick
+        , onAnimationFrameDelta Tick
         , Mouse.clicks Click
         ]
 

@@ -22,19 +22,28 @@ module Seismogram exposing (main)
 -}
 
 import Animation exposing (..)
-import AnimationFrame
+import Browser.Events exposing (onAnimationFrameDelta)
 import Collage
 import Color
 import Element exposing (Element)
 import Html exposing (program)
 import Mouse
 import Task
-import Time exposing (Time)
 import Window
 
 
+second : Float
+second =
+    1000
+
+
 type alias Model =
-    { x : Animation, w : Int, h : Int, clock : Time, dots : List ( Float, Time ) }
+    { x : Animation
+    , w : Int
+    , h : Int
+    , clock : Clock
+    , dots : List ( Float, Float )
+    }
 
 
 model0 =
@@ -42,7 +51,7 @@ model0 =
 
 
 type Msg
-    = Tick Time
+    = Tick Float
     | Resize Window.Size
     | Click Mouse.Position
     | Cull
@@ -52,10 +61,10 @@ type Msg
 subs : Sub Msg
 subs =
     Sub.batch
-        [ AnimationFrame.diffs Tick
+        [ onAnimationFrameDelta Tick
         , Mouse.clicks Click
         , Window.resizes Resize
-        , Time.every (0.5 * Time.second) (always Cull)
+        , Time.every (0.5 * second) (always Cull)
         ]
 
 

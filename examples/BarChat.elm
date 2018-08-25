@@ -5,12 +5,11 @@ module BarChart exposing (main)
 -}
 
 import Animation exposing (..)
-import AnimationFrame exposing (diffs)
+import Browser.Events exposing (onAnimationFrameDelta)
 import Color exposing (gray, red)
 import Element exposing (Element, color, down, flow, right, spacer)
 import Html exposing (program)
 import Random
-import Time exposing (Time)
 
 
 data : List Int
@@ -55,7 +54,7 @@ render1 x =
         ]
 
 
-render : List Animation -> Time -> Element
+render : List Animation -> Clock -> Element
 render anims t =
     flow
         right
@@ -72,6 +71,6 @@ main =
     program
         { init = ( 0, Cmd.none )
         , update = \dt t -> ( t + dt, Cmd.none )
-        , subscriptions = \model -> diffs identity
+        , subscriptions = \model -> onAnimationFrameDelta identity
         , view = renderClosure >> Element.toHtml
         }

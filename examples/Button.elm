@@ -1,19 +1,18 @@
 module Button exposing (main)
 
 import Animation exposing (..)
-import AnimationFrame
+import Browser.Events exposing (onAnimationFrameDelta)
 import Collage
 import Color exposing (darkBlue, white)
 import Element exposing (Element)
 import Html exposing (program)
 import Mouse
 import Task
-import Time exposing (Time)
 import Window
 
 
 type Msg
-    = Tick Time
+    = Tick Float
     | MouseMove Mouse.Position
     | MouseClick Mouse.Position
     | Resize Window.Size
@@ -39,7 +38,7 @@ type alias Model =
     , h : Int
     , r : Animation
     , theta : Animation
-    , clock : Time
+    , clock : Clock
     , state : State
     }
 
@@ -208,7 +207,7 @@ subs : Sub Msg
 subs =
     Sub.batch
         [ Window.resizes Resize
-        , AnimationFrame.diffs Tick
+        , onAnimationFrameDelta Tick
         , Mouse.clicks MouseClick
         , Mouse.moves MouseMove
         ]

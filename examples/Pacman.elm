@@ -5,7 +5,7 @@ module Pacman exposing (main)
    repetitive than I’d like, suggesting a loop function.
    Without a major overhaul, the best implementation would be
 
-       loop : Time -> Animation -> Animation
+       loop : Clock -> Animation -> Animation
        loop t a = if isDone t a then undo t a else a
 
    This requires the client to call the function on each invocation
@@ -27,31 +27,41 @@ module Pacman exposing (main)
 -}
 
 import Animation exposing (..)
-import AnimationFrame
+import Browser.Events exposing (onAnimationFrameDelta)
 import Collage
 import Color exposing (yellow)
 import Element exposing (Element)
 import Html exposing (program)
 import Task exposing (Task)
-import Time exposing (Time)
 import Window
 
 
 type alias Model =
-    { r : Animation, x : Animation, y : Animation, w : Int, h : Int, clock : Time }
+    { r : Animation
+    , x : Animation
+    , y : Animation
+    , w : Int
+    , h : Int
+    , clock : Clock
+    }
+
+
+second : Float
+second =
+    1000
 
 
 model0 =
-    Model (animation 0 |> from 40 |> to 60 |> duration (0.2 * Time.second))
-        (animation 0 |> from 200 |> to -200 |> duration Time.second)
-        (animation 0 |> from 200 |> to -200 |> duration Time.second |> delay Time.second)
+    Model (animation 0 |> from 40 |> to 60 |> duration (0.2 * second))
+        (animation 0 |> from 200 |> to -200 |> duration second)
+        (animation 0 |> from 200 |> to -200 |> duration second |> delay second)
         0
         0
         0
 
 
 type Msg
-    = Tick Time
+    = Tick Float
     | Resize Window.Size
     | NoOp
 
@@ -83,7 +93,7 @@ update msg model =
 
                 y =
                     if moveDone then
-                        undo clock model.y |> delay Time.second
+                        undo clock model.y |> delay second
 
                     else
                         model.y
@@ -116,7 +126,7 @@ subs : Sub Msg
 subs =
     Sub.batch
         [ Window.resizes Resize
-        , AnimationFrame.diffs Tick
+        , onAnimationFrameDelta Tick
         ]
 
 
