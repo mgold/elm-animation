@@ -30,10 +30,9 @@ import Animation exposing (..)
 import Browser
 import Browser.Dom exposing (getViewport)
 import Browser.Events exposing (onAnimationFrameDelta, onResize)
-import Collage
-import Color exposing (yellow)
-import Element exposing (Element)
 import Json.Decode exposing (Value)
+import Svg exposing (Svg)
+import Svg.Attributes as SA
 import Task exposing (Task)
 
 
@@ -108,19 +107,31 @@ update msg model =
             model
 
 
-scene : Model -> Element
-scene { w, h, r, x, y, clock } =
+view : Model -> Svg Msg
+view { w, h, r, x, y, clock } =
     let
         radius =
             animate clock r
 
-        pos =
-            ( animate clock x, animate clock y )
+        posX =
+            animate clock x + toFloat w / 2
 
-        circle =
-            Collage.circle radius |> Collage.filled yellow |> Collage.move pos
+        posY =
+            animate clock y + toFloat h / 2
     in
-    Collage.collage w h [ circle ]
+    Svg.svg
+        [ SA.style "position:absolute;left:0;top:0"
+        , SA.width (String.fromInt w)
+        , SA.height (String.fromInt h)
+        ]
+        [ Svg.circle
+            [ SA.r (String.fromFloat radius)
+            , SA.cx (String.fromFloat posX)
+            , SA.cy (String.fromFloat posY)
+            , SA.fill "yellow"
+            ]
+            []
+        ]
 
 
 subs : Sub Msg
@@ -145,5 +156,5 @@ main =
                 )
         , update = \msg model -> ( update msg model, Cmd.none )
         , subscriptions = always subs
-        , view = scene >> Element.toHtml
+        , view = view
         }
