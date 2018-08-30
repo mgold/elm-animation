@@ -461,16 +461,10 @@ usually not in practice).
 -}
 equals : Animation -> Animation -> Bool
 equals (A a) (A b) =
-    a.start
-        + a.delay_
-        == b.start
-        + b.delay_
-        && a.from_
-        == b.from_
-        && a.to_
-        == b.to_
-        && a.ramp
-        == b.ramp
+    (a.start + a.delay_ == b.start + b.delay_)
+        && (a.from_ == b.from_)
+        && (a.to_ == b.to_)
+        && (a.ramp == b.ramp)
         && (a.dos == b.dos || 0.001 >= abs (dur a.dos a.from_ a.to_ - dur b.dos b.from_ b.to_))
         && List.all (\t -> a.ease_ t == b.ease_ t) [ 0.1, 0.3, 0.7, 0.9 ]
 
