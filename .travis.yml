@@ -7,5 +7,6 @@ install:
   - npm install -g elm-verify-examples
 script:
   - elm make
+  - pushd examples && find . -name "*.elm" | xargs elm make && popd
   - elm-verify-examples
   - elm-test
