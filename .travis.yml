@@ -1,0 +1,12 @@
+language: node_js
+node_js:
+  - "7"
+install:
+  - npm install -g elm
+  - npm install -g elm-test@beta
+  - npm install -g elm-verify-examples
+  - elm-package install -y
+  - pushd tests && elm-package install -y && popd
+  - elm-verify-examples
+script:
+  - elm-test
