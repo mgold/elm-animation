@@ -1,5 +1,7 @@
 # elm-animation
 
+[![Build Status](https://travis-ci.org/mgold/elm-animation.svg?branch=master)](https://travis-ci.org/mgold/elm-animation)
+
 Animate `Float` values with control over their start and end values, duration, easing, and so on. For example, animate a panel's width from 100px to 300px over 2 seconds, or make a button spin and grow on hover. Supports advanced features like smoothly retargeting to a new destination while in flight.
 
 This library is fairly low-level from the perspective of building web apps. Many users will be better served by [mdgriffith/elm-style-animation](https://package.elm-lang.org/packages/mdgriffith/elm-style-animation/latest/).
