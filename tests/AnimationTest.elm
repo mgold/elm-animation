@@ -7,13 +7,18 @@ import Test exposing (..)
 import Time
 
 
+tolerance : Expect.FloatingPointTolerance
+tolerance =
+    Expect.Absolute 0.00001
+
+
 animationTests : Test
 animationTests =
     describe "animation"
         [ describe "static"
-            [ fuzz Fuzz.float "static animations always return the same value" <|
-                \t ->
-                    static 8 |> animate t |> Expect.equal 8
+            [ fuzz2 Fuzz.float Fuzz.float "static animations always return the same value" <|
+                \val t ->
+                    static val |> animate t |> Expect.within tolerance val
             ]
         , describe "delay"
             [ fuzz Fuzz.float "animation doesn't start until after delay" <|
@@ -28,6 +33,73 @@ animationTests =
                         |> delay delayLength
                         |> animate (delayLength + 1)
                         |> Expect.greaterThan 0
+            ]
+        , describe "undo"
+            [ test "it returns to the original start" <|
+                \_ ->
+                    animation 0
+                        |> duration 100
+                        |> undo 50
+                        |> animate 100
+                        |> Expect.equal 0
+            , test "does not disturb position" <|
+                \_ ->
+                    let
+                        original =
+                            animation 0
+                                |> duration 100
+                                |> animate 50
+
+                        undone =
+                            animation 0
+                                |> duration 100
+                                |> undo 50
+                                |> animate 50
+                    in
+                    undone |> Expect.within tolerance original
+            , test "inverts the magnitude of velocity" <|
+                \_ ->
+                    let
+                        original =
+                            animation 0
+                                |> duration 100
+                                |> getVelocity 50
+
+                        undone =
+                            animation 0
+                                |> duration 100
+                                |> undo 50
+                                |> getVelocity 50
+                                |> (*) -1
+                    in
+                    undone |> Expect.within tolerance original
+            ]
+        , describe "retargeting"
+            [ test "it ends up at the new value" <|
+                \_ ->
+                    let
+                        retargeted =
+                            animation 0
+                                |> duration 100
+                                |> retarget 50 2
+                                |> animate 150
+                    in
+                    retargeted |> Expect.within (Expect.Absolute 0.02) 2
+            , fuzz Fuzz.float "does not disturb position" <|
+                \newValue ->
+                    let
+                        original =
+                            animation 0
+                                |> duration 100
+                                |> animate 50
+
+                        undone =
+                            animation 0
+                                |> duration 100
+                                |> retarget 50 newValue
+                                |> animate 50
+                    in
+                    undone |> Expect.within tolerance original
             ]
         , describe "timeElapsed"
             [ test "it is 0 for an unstarted, delayed animation" <|
@@ -53,7 +125,7 @@ animationTests =
                 \clock ->
                     static pi
                         |> timeElapsed clock
-                        |> Expect.within (Expect.Absolute 0.0001) 0
+                        |> Expect.within tolerance 0
             ]
         , describe "timeRemaining"
             [ test "it is the total time for an unstarted animation" <|
@@ -79,7 +151,7 @@ animationTests =
                 \clock ->
                     static pi
                         |> timeRemaining clock
-                        |> Expect.within (Expect.Absolute 0.0001) 0
+                        |> Expect.within tolerance 0
             ]
         , describe "isScheduled"
             [ test "true case" <|
