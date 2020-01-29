@@ -1,68 +1,51 @@
-module Pacman exposing (main)
+module Main exposing (..)
 
-{- This example shows a looping animation using only the undo method,
-   not retarget. The step function is a little more
-   repetitive than I’d like, suggesting a loop function.
-   Without a major overhaul, the best implementation would be
+{- This example shows a looping animation using only the undo method, not retarget. The step function is a little more
+   repetitive than I'd like, suggesting a loop function. Without a major overhaul, the best implementation would be
 
-       loop : Clock -> Animation -> Animation
+       loop : Time -> Animation -> Animation
        loop t a = if isDone t a then undo t a else a
 
-   This requires the client to call the function on each invocation
-   of update, which I consider unacceptable. Better to have this be
-   handled under the covers, but that means expanding the `Animation`
-   custom type. The best way to do that is probably define a
-   `StandardAnimation` type and have all tags convert to it. Alternatively,
-   come up with a sufficiently general representation and hope it isn’t
-   too crazy to work with.
+   This requires the client to call the function on each invocation of update, which I consider unacceptable. Better to
+   have this be handled under the covers, but that means expanding the Animation union type. The best way to do that is
+   probably define a StandardAnimation type and have all tags convert to it. Alternatively, come up with a sufficiently
+   general representation and hope it isn't too crazy to work with.
 
-   Or stick it in a separate module — how often can you see multiple
-   animations into the future? The trend seems to be the reverse direction,
-   with physics simulations seeing only the next frame, handling interactions
-   as they come rather than interrupting a plan. In the mean time,
-   animations are certainly composable if the client does some of the work
+   Or stick it in a separate module - how often can you see multiple animations into the future? The trend seems to be the
+   reverse direction, with physics simulations seeing only the next frame, handling interactions as they come rather than
+   interrupting a plan. In the mean time, animations are certainly composable if the client does some of the work
    themselves.
 
    End brain dump.
 -}
 
-import Animation exposing (..)
-import Browser
-import Browser.Dom exposing (getViewport)
-import Browser.Events exposing (onAnimationFrameDelta, onResize)
-import Json.Decode exposing (Value)
-import Svg exposing (Svg)
-import Svg.Attributes as SA
+import Color exposing (yellow)
+import Collage
+import Element exposing (Element)
+import Time exposing (Time)
 import Task exposing (Task)
+import AnimationFrame
+import Window
+import Html exposing (program)
+import Animation exposing (..)
 
 
 type alias Model =
-    { r : Animation
-    , x : Animation
-    , y : Animation
-    , w : Int
-    , h : Int
-    , clock : Clock
-    }
-
-
-second : Float
-second =
-    1000
+    { r : Animation, x : Animation, y : Animation, w : Int, h : Int, clock : Time }
 
 
 model0 =
-    Model (animation 0 |> from 40 |> to 60 |> duration (0.2 * second))
-        (animation 0 |> from 200 |> to -200 |> duration second)
-        (animation 0 |> from 200 |> to -200 |> duration second |> delay second)
+    Model (animation 0 |> from 40 |> to 60 |> duration (0.2 * Time.second))
+        (animation 0 |> from 200 |> to -200 |> duration Time.second)
+        (animation 0 |> from 200 |> to -200 |> duration Time.second |> delay Time.second)
         0
         0
         0
 
 
 type Msg
-    = Tick Float
-    | Resize Int Int
+    = Tick Time
+    | Resize Window.Size
     | NoOp
 
 
@@ -77,7 +60,6 @@ update msg model =
                 r =
                     if isDone clock model.r then
                         undo clock model.r
-
                     else
                         model.r
 
@@ -87,74 +69,51 @@ update msg model =
                 x =
                     if moveDone then
                         undo clock model.x
-
                     else
                         model.x
 
                 y =
                     if moveDone then
-                        undo clock model.y |> delay second
-
+                        undo clock model.y |> delay Time.second
                     else
                         model.y
             in
-            { model | clock = clock, r = r, x = x, y = y }
+                { model | clock = clock, r = r, x = x, y = y }
 
-        Resize width height ->
+        Resize { width, height } ->
             { model | w = width, h = height }
 
         NoOp ->
             model
 
 
-view : Model -> Svg Msg
-view { w, h, r, x, y, clock } =
+scene : Model -> Element
+scene { w, h, r, x, y, clock } =
     let
         radius =
             animate clock r
 
-        posX =
-            animate clock x + toFloat w / 2
+        pos =
+            ( animate clock x, animate clock y )
 
-        posY =
-            animate clock y + toFloat h / 2
+        circle =
+            Collage.circle radius |> Collage.filled yellow |> Collage.move pos
     in
-    Svg.svg
-        [ SA.style "position:absolute;left:0;top:0"
-        , SA.width (String.fromInt w)
-        , SA.height (String.fromInt h)
-        ]
-        [ Svg.circle
-            [ SA.r (String.fromFloat radius)
-            , SA.cx (String.fromFloat posX)
-            , SA.cy (String.fromFloat posY)
-            , SA.fill "yellow"
-            ]
-            []
-        ]
+        Collage.collage w h [ circle ]
 
 
 subs : Sub Msg
 subs =
     Sub.batch
-        [ onResize Resize
-        , onAnimationFrameDelta Tick
+        [ Window.resizes Resize
+        , AnimationFrame.diffs Tick
         ]
 
 
-main : Program Value Model Msg
 main =
-    Browser.element
-        { init =
-            always
-                ( model0
-                , Task.perform
-                    (\{ viewport } ->
-                        Resize (round viewport.width) (round viewport.height)
-                    )
-                    getViewport
-                )
-        , update = \msg model -> ( update msg model, Cmd.none )
+    program
+        { init = ( model0, Task.perform Resize Window.size )
+        , update = (\msg model -> ( update msg model, Cmd.none ))
         , subscriptions = always subs
-        , view = view
+        , view = scene >> Element.toHtml
         }

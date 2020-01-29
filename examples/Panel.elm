@@ -1,32 +1,25 @@
-module Panel exposing (main)
+{- In this example, rather than steadily counting time and replacing animations, we rock time back and forth and
+   maintain the same animations. A naive implementation, shown as the top panel, reverses direction immediately, rather
+   than slowing down first. A more advanced implementation animates time itself: rather than always adding or
+   subtracting the timestep, it interpolates between a factor or -1 and 1. (It only does this if the animation is
+   interrupted; if it is restarted after completing it works identitcally to the naive version, to avoid lag at the
+   start.)
 
-{- In this example, rather than steadily counting time and replacing
-   animations, we rock time back and forth and maintain the same animations.
-   A naive implementation, shown as the top panel, reverses direction
-   immediately, rather than slowing down first. A more advanced implementation
-   animates time itself: rather than always adding or subtracting the
-   timestep, it interpolates between a factor or -1 and 1.
-   (It only does this if the animation is interrupted; if it is restarted
-   after completing it works identitcally to the naive version,
-   to avoid lag at the start.)
-
-   Click the mouse to trigger the animation. If you cick rapidly,
-   the second panel looks a lot better.
+   Click the mouse to trigger the animation. If you cick rapidly, the second panel looks a lot better.
 -}
 
-import Animation exposing (..)
-import Browser
-import Browser.Dom exposing (getViewport)
-import Browser.Events exposing (onAnimationFrameDelta, onClick, onResize)
-import Json.Decode as Decode exposing (Value)
-import Svg exposing (Svg)
-import Svg.Attributes as SA
+
+module Main exposing (..)
+
+import Color exposing (Color)
+import Element as E exposing (Element)
 import Task
-
-
-second : Float
-second =
-    1000
+import Time exposing (Time, second)
+import Mouse
+import Window
+import Html exposing (program)
+import AnimationFrame
+import Animation exposing (..)
 
 
 width =
@@ -41,40 +34,35 @@ color =
     animation 0 |> duration second
 
 
-type RGB
-    = RGB Int Int Int
-
-
 type alias Model =
-    { trueClock : Clock
-
-    -- Aristotelian and Newtonian clocks
-    , arisClock : Clock
-    , newtClock : Clock
+    { trueClock : Time
+    , arisClock :
+        Time
+        -- Aristotelian and Newtonian clocks
+    , newtClock : Time
     , forward : Bool
     , newtFactor : Animation
-    , w : Int
-    , h : Int
+    , windowSize : Window.Size
     }
 
 
 model0 : Model
 model0 =
-    Model 0 0 0 False (static -1) 0 0
+    Model 0 0 0 False (static -1) (Window.Size 0 0)
 
 
 type Msg
-    = Tick Float
-    | Resize Int Int
+    = Tick Time
+    | Resize Window.Size
     | Click
     | NoOp
 
 
-subscriptions : Model -> Sub Msg
-subscriptions _ =
+subs : Sub Msg
+subs =
     Sub.batch
-        [ onClick (Decode.succeed Click)
-        , onAnimationFrameDelta Tick
+        [ Mouse.clicks (always Click)
+        , AnimationFrame.diffs Tick
         ]
 
 
@@ -92,57 +80,57 @@ update action model =
         NoOp ->
             model
 
-        Resize w h ->
-            { model | w = w, h = h }
+        Resize size ->
+            { model | windowSize = size }
 
         Tick dt ->
             let
                 newTrueClock =
                     model.trueClock + dt
             in
-            { model
-                | trueClock = newTrueClock
-                , arisClock =
-                    model.arisClock
-                        -- always +dt or -dt
-                        + (if model.forward then
-                            dt
-
-                           else
-                            -dt
-                          )
-                , newtClock =
-                    model.newtClock
-                        -- often between +dt and -dt
-                        + (dt * animate newTrueClock model.newtFactor)
-            }
+                { model
+                    | trueClock = newTrueClock
+                    , arisClock =
+                        model.arisClock
+                            + dt
+                            * (if model.forward then
+                                1
+                               else
+                                -1
+                              )
+                        -- always 1 or -1
+                    , newtClock =
+                        model.newtClock + dt * (animate newTrueClock model.newtFactor)
+                        -- often between 1 or -1
+                }
 
         Click ->
             if model.forward then
                 { model
                     | forward = False
                     , newtFactor =
-                        if model.newtClock > second then
+                        if
+                            model.newtClock > second
                             -- skip tweening if restarting animation from rest
+                        then
                             static -1
-
                         else
                             animateRev |> delay model.trueClock
-
-                    -- reset clocks that have gotten really big
-                    -- but keep them if we're still animating
-                    , arisClock = min model.arisClock second
-                    , newtClock = min model.newtClock second
+                    , arisClock =
+                        min model.arisClock second
+                        -- reset clocks that have gotten really big
+                    , newtClock =
+                        min model.newtClock second
+                        -- but keep them if we're still animating
                 }
-
             else
-                -- works exactly opposite the other case
                 { model
-                    | forward = True
+                    | forward =
+                        True
+                        -- works exactly opposite the other case
                     , newtFactor =
                         if model.newtClock < 0 then
                             static 1
-
                         else
                             animateFwd |> delay model.trueClock
                     , arisClock = max model.arisClock 0
@@ -158,77 +146,63 @@ lerp_ from to v =
     round (lerp (toFloat from) (toFloat to) v)
 
 
-colorEase : RGB -> RGB -> Float -> RGB
-colorEase (RGB r1 g1 b1) (RGB r2 g2 b2) v =
-    RGB
-        (lerp_ r1 r2 v)
-        (lerp_ g1 g2 v)
-        (lerp_ b1 b2 v)
+colorEase from to v =
+    let
+        ( rgb1, rgb2 ) =
+            ( Color.toRgb from, Color.toRgb to )
+
+        ( r1, g1, b1, a1 ) =
+            ( rgb1.red, rgb1.green, rgb1.blue, rgb1.alpha )
+
+        ( r2, g2, b2, a2 ) =
+            ( rgb2.red, rgb2.green, rgb2.blue, rgb2.alpha )
+    in
+        Color.rgba (lerp_ r1 r2 v) (lerp_ g1 g2 v) (lerp_ b1 b2 v) (lerp a1 a2 v)
 
 
-padding : Float
+easeColor : Float -> Color
+easeColor =
+    colorEase Color.purple (Color.rgb 74 178 182)
+
+
+padding : Element
 padding =
-    50
+    E.spacer 50 50
 
 
-render : Float -> Clock -> Svg Msg
-render yOffset clock =
+render : Time -> Element
+render clock =
     let
         wid =
-            animate clock width
+            animate clock width |> round
 
         hei =
-            animate clock height
+            animate clock height |> round
 
-        (RGB r g b) =
-            color
-                |> animate clock
-                |> colorEase (RGB 115 51 128) (RGB 74 178 182)
+        clr =
+            animate clock color |> easeColor
     in
-    Svg.rect
-        [ SA.width (String.fromFloat wid)
-        , SA.height (String.fromFloat hei)
-        , SA.y (String.fromFloat yOffset)
-        , SA.fill ("rgb(" ++ String.fromInt r ++ "," ++ String.fromInt g ++ "," ++ String.fromInt b ++ ")")
-        ]
-        []
+        E.spacer wid hei |> E.color clr
 
 
-view : Model -> Svg Msg
-view { arisClock, newtClock, w, h } =
-    Svg.svg
-        [ SA.style "position:absolute;left:0;top:0"
-        , SA.width (String.fromInt w)
-        , SA.height (String.fromInt h)
-        ]
-        [ Svg.g
-            [ SA.transform
-                ("translate("
-                    ++ String.fromFloat padding
-                    ++ " "
-                    ++ String.fromFloat padding
-                    ++ ")"
-                )
+scene : Model -> Element
+scene { arisClock, newtClock } =
+    E.beside padding <|
+        E.flow
+            E.down
+            [ padding
+            , render arisClock
+            , E.spacer 1 <| round <| getTo height - animate arisClock height
+              -- keep top of second panel fixed
+            , padding
+            , render newtClock
             ]
-            [ render 0 arisClock
-            , render (padding + getTo height) newtClock
-            ]
-        ]
 
 
-main : Program Value Model Msg
 main =
-    Browser.element
-        { init =
-            always
-                ( model0
-                , Task.perform
-                    (\{ viewport } ->
-                        Resize (round viewport.width) (round viewport.height)
-                    )
-                    getViewport
-                )
-        , update = \msg model -> ( update msg model, Cmd.none )
-        , subscriptions = subscriptions
-        , view = view
+    program
+        { init = ( model0, Task.perform Resize Window.size )
+        , update = (\msg model -> ( update msg model, Cmd.none ))
+        , subscriptions = always subs
+        , view = scene >> E.toHtml
         }
