@@ -1,12 +1,13 @@
 language: node_js
 node_js:
-  - "7"
+  - "10"
+  - "12"
 install:
-  - npm install -g elm
-  - npm install -g elm-test@beta
+  - npm install -g elm@latest-0.19.1
+  - npm install -g elm-test@elm0.19.1
   - npm install -g elm-verify-examples
 script:
   - elm make
-  - pushd examples && find . -name "*.elm" | xargs elm make && popd
   - elm-verify-examples
+  # - pushd examples && find . -name "*.elm" | xargs elm make && popd
   - elm-test
